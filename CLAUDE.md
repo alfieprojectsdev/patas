@@ -3,6 +3,20 @@
 High school groups pick where to meet so no one carries an unfair commute.
 Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product later.
 
+## Scope: Quezon City only (MVP)
+- `src/lib/scope.ts`: venues must be in QC; origins allowed within a 5 km
+  buffer (QC-school students often live in Caloocan/San Mateo/Marikina).
+- Current check is a rough bbox — replace with the OSM QC boundary polygon.
+- Out-of-area error is generic (doesn't say which member).
+- Why QC-only helps:
+  - Fares: tricycle fares are LGU-set, so ONE QC fare ordinance covers it.
+  - QC runs its own city bus service (verify current routes and fare policy);
+    a fare-free option changes the peso side of fairness.
+  - Self-hosted OSRM/Valhalla can use a small Metro Manila clip (keep a
+    buffer — routes leave QC, e.g. via Commonwealth/Marcos Hwy/EDSA).
+  - Curated venue allowlist is tractable at city scale (QC public libraries,
+    schools, malls that tolerate student groups).
+
 ## Core idea (don't regress this)
 - NOT a centroid problem. The centroid is only a search seed for candidate venues.
 - Discrete facility location: candidates (public venues + each member's landmark

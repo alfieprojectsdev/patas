@@ -1,5 +1,6 @@
 import type { Origin, Venue } from "./types";
 import { centroid, haversineKm } from "./scoring.ts";
+import { qcOverpassBbox, venueInScope } from "./scope.ts";
 
 /**
  * Candidate venues: public places near the group, plus each member's
@@ -38,7 +39,8 @@ export async function findCandidates(origins: Origin[], max = 20): Promise<Venue
     process.env.CANDIDATE_SOURCE === "google"
       ? await googlePlaces(area, max)
       : await overpass(area, max);
-  return [...publicVenues, ...hostOptions(origins)];
+  // QC-only scope: drop venues (incl. host options) outside the service area.
+  return [...publicVenues, ...hostOptions(origins)].filter((v) => venueInScope(v.location));
 }
 
 // ---------- Overpass (OSM) ----------
@@ -49,7 +51,8 @@ export async function findCandidates(origins: Origin[], max = 20): Promise<Venue
  * Note: OSM opening_hours coverage in PH is spotty; don't filter on it.
  */
 export function overpassQuery(a: SearchArea, max: number): string {
-  const around = `(around:${a.radiusM},${a.lat.toFixed(6)},${a.lng.toFixed(6)})`;
+  // around ∩ QC bbox (Overpass intersects chained spatial filters)
+  const around = `(around:${a.radiusM},${a.lat.toFixed(6)},${a.lng.toFixed(6)})${qcOverpassBbox()}`;
   return `[out:json][timeout:25];
 (
   nwr["amenity"~"^(cafe|library|fast_food|restaurant|community_centre)$"]["name"]${around};

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { findCandidates } from "@/lib/candidates";
 import { getProvider } from "@/lib/routing";
 import { rankVenues } from "@/lib/scoring";
+import { originInScope } from "@/lib/scope";
 
 /**
  * POST /api/meet
@@ -34,6 +35,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
 
   const { origins, mode, priorBurden, departureTime } = parsed.data;
+  // Generic message: don't reveal which member is out of area to the group.
+  if (!origins.every((o) => originInScope(o.landmark))) {
+    return NextResponse.json({ error: "Patas currently covers Quezon City only" }, { status: 422 });
+  }
   const provider = getProvider();
   if (!provider.supports.includes(mode)) {
     return NextResponse.json({ error: `mode ${mode} not supported by ${provider.name}` }, { status: 400 });
