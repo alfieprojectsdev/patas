@@ -24,8 +24,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 
 ## Layout
 - `src/lib/scoring.ts` — pure ranking + centroid/haversine. Tested.
-- `src/lib/routing.ts` — `MatrixProvider` seam; Google Routes computeRouteMatrix default.
-- `src/lib/candidates.ts` — Places API (New) searchNearby + host options.
+- `src/lib/routing.ts` — `MatrixProvider` seam. Default `orsProvider`
+  (OpenRouteService, OSM data; DRIVE/WALK; TWO_WHEELER approximated as car;
+  no TRANSIT, no traffic). `googleProvider` fallback. `ROUTING_PROVIDER` env.
+- `src/lib/candidates.ts` — Overpass (OSM, default) or Google Places (New),
+  plus host options. `CANDIDATE_SOURCE` env. Parsers are pure + tested.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
 - `src/app/api/meet/route.ts` — POST endpoint, zod-validated.
 - `supabase/migrations/0001_init.sql` — groups, members, meetings, burdens (no location).
@@ -34,10 +37,21 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `npm test` — node:test via --experimental-strip-types (Node ≥22.6)
 - `npm run dev` — needs GOOGLE_MAPS_API_KEY in `.env.local`
 
+## Provider strategy
+- MVP: ORS hosted free tier + public Overpass. Zero infra, zero cost.
+- Privacy upgrade: self-host OSRM (`table` service) or Valhalla on a small VPS
+  (PH extract) so minors' coordinates never leave our server. Add as a new
+  `MatrixProvider`; Vercel can't host it.
+- Don't trust OSM `opening_hours` in PH (sparse). Venue POIs are spottier than
+  Google's; roads in Metro Manila are fine.
+- Public Nominatim forbids autocomplete — landmark search needs Photon,
+  self-hosted Nominatim, or Google Places Autocomplete.
+
 ## Known gaps / next steps (in order)
-1. Verify Routes API element limits per mode; chunk matrix requests if needed.
-2. Confirm Places `includedTypes` values; consider a curated venue allowlist
-   (school, public libraries) — Google types miss "allows students to stay 4 hrs".
+1. Smoke-test ORS + Overpass live with real keys (unit tests use fixtures only).
+   Verify ORS free-tier matrix limits and Routes API limits; chunk if needed.
+2. Curated venue allowlist (school, public libraries) — neither OSM nor Google
+   knows "lets students stay 4 hrs".
 3. MVP UI per `src/app/page.tsx` TODOs. Join code, no accounts.
 4. RLS policies + scheduled purge of expired groups.
 5. Fares: LTFRB matrices, student discount, rail station-pair tables.

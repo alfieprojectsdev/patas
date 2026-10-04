@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findCandidates } from "@/lib/candidates";
-import { travelMinutes } from "@/lib/routing";
+import { getProvider } from "@/lib/routing";
 import { rankVenues } from "@/lib/scoring";
 
 /**
@@ -34,9 +34,13 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
 
   const { origins, mode, priorBurden, departureTime } = parsed.data;
+  const provider = getProvider();
+  if (!provider.supports.includes(mode)) {
+    return NextResponse.json({ error: `mode ${mode} not supported by ${provider.name}` }, { status: 400 });
+  }
   try {
     const venues = await findCandidates(origins);
-    const matrix = await travelMinutes(
+    const matrix = await provider.minutes(
       origins.map((o) => o.landmark),
       venues.map((v) => v.location),
       mode,

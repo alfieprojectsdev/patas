@@ -1,19 +1,84 @@
 import type { CostMatrix, LatLng, TravelMode } from "./types";
 
 /**
- * Provider seam. Google is the default; a Sakay.ph-backed provider (jeepney/
- * UV/bus routing + fares) is the intended upgrade for TRANSIT if a data
- * partnership happens. Keep scoring/candidates provider-agnostic.
+ * Provider seam. Default is OpenRouteService (OSM data, free tier) for the
+ * MVP; Google is a fallback; self-hosted OSRM/Valhalla is the privacy upgrade
+ * (coords never leave our server); a Sakay.ph-backed provider is the intended
+ * TRANSIT upgrade if a data partnership happens.
+ * Select with ROUTING_PROVIDER=ors|google (default ors).
  */
 export interface MatrixProvider {
   name: string;
+  supports: TravelMode[];
   minutes(origins: LatLng[], destinations: LatLng[], mode: TravelMode, departureTime?: Date): Promise<CostMatrix>;
 }
 
 export const googleProvider: MatrixProvider = {
   name: "google-routes",
+  supports: ["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER"],
   minutes: (o, d, m, t) => travelMinutes(o, d, m, t),
 };
+
+// ---------- OpenRouteService (OSM) ----------
+
+/**
+ * ORS has no motorcycle profile; TWO_WHEELER maps to driving-car as an
+ * approximation (understates motorcycle speed in traffic). No transit.
+ */
+const ORS_PROFILE: Partial<Record<TravelMode, string>> = {
+  DRIVE: "driving-car",
+  TWO_WHEELER: "driving-car",
+  WALK: "foot-walking",
+};
+
+/** Pure: ORS matrix response → minutes matrix. Exported for tests. */
+export function parseOrsMatrix(json: { durations?: (number | null)[][] }, n: number, m: number): CostMatrix {
+  const d = json.durations;
+  if (!d || d.length !== n || d.some((row) => row.length !== m)) {
+    throw new Error("ORS matrix shape mismatch");
+  }
+  return d.map((row) => row.map((s) => (s == null ? null : s / 60)));
+}
+
+/**
+ * ORS matrix: POST /v2/matrix/{profile}, locations as [lng, lat] (note order),
+ * sources/destinations as indices into one combined locations array.
+ * ORS ignores departure time — durations are typical, not traffic-aware.
+ * TODO(claude-code): verify current free-tier matrix limits (elements per
+ * request, requests/min) and chunk if n*m exceeds them.
+ */
+export const orsProvider: MatrixProvider = {
+  name: "openrouteservice",
+  supports: ["DRIVE", "WALK", "TWO_WHEELER"],
+  async minutes(origins, destinations, mode) {
+    const key = process.env.ORS_API_KEY;
+    if (!key) throw new Error("ORS_API_KEY not set");
+    const profile = ORS_PROFILE[mode];
+    if (!profile) throw new Error(`ORS does not support mode ${mode}`);
+
+    const locations = [...origins, ...destinations].map((p) => [p.lng, p.lat]);
+    const n = origins.length;
+    const m = destinations.length;
+
+    const res = await fetch(`https://api.openrouteservice.org/v2/matrix/${profile}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: key },
+      body: JSON.stringify({
+        locations,
+        sources: [...Array(n).keys()],
+        destinations: [...Array(m).keys()].map((j) => n + j),
+        metrics: ["duration"],
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`ORS ${res.status}`); // no body echo
+    return parseOrsMatrix(await res.json(), n, m);
+  },
+};
+
+export function getProvider(): MatrixProvider {
+  return process.env.ROUTING_PROVIDER === "google" ? googleProvider : orsProvider;
+}
 
 /**
  * Travel-time matrix via Google Routes API (computeRouteMatrix).
