@@ -17,6 +17,20 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   - Curated venue allowlist is tractable at city scale (QC public libraries,
     schools, malls that tolerate student groups).
 
+## H3 snapping + precomputed tables
+- `src/lib/h3.ts`: res 9 (~200 m edge). Client should snap and send only the
+  cell id; API also accepts a landmark but snaps it immediately. All routing
+  (live or precomputed) uses cell centres, never exact coordinates.
+- `src/lib/precomputed.ts` + `scripts/precompute.ts`: offline cell→venue
+  tables per (mode, time band). API uses a table if `PRECOMPUTED_DIR` has
+  `<mode>_<band>.json`, else falls back to live routing. Response `source`
+  says which.
+- Budget first: `--dry-run` prints elements/requests. Bbox gives ~3.6k cells;
+  the QC polygon cuts that to ~1.5k. Check provider quotas before a full run.
+- One traffic-aware Google build per band fixes ORS's no-traffic bias.
+- Open: host options in table mode need a cell→cell table; `data/venues.json`
+  (curated QC venues) doesn't exist yet — see `data/venues.example.json`.
+
 ## Core idea (don't regress this)
 - NOT a centroid problem. The centroid is only a search seed for candidate venues.
 - Discrete facility location: candidates (public venues + each member's landmark
