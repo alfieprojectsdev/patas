@@ -329,7 +329,7 @@ function LandmarkPicker({ value, onChange }: { value: Landmark | null; onChange:
         setOptions(data.results ?? []);
         setSearched(q);
         setActive(0);
-        setOpen(true);
+        if (document.activeElement === inputRef.current) setOpen(true);
       } catch {
         /* aborted or offline: keep the old list */
       }

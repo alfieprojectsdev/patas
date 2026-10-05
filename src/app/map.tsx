@@ -25,6 +25,13 @@ export type MapVenue = { venueId: string; rank: number; name: string; location: 
 const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.54, 120.93], [14.83, 121.19]];
 const QC_LATLNGS = QC_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
 
+/** Leaflet treats tooltip strings as HTML; nicknames and OSM names must go in as text. */
+const textEl = (s: string) => {
+  const el = document.createElement("span");
+  el.textContent = s;
+  return el;
+};
+
 const centre = (hex: [number, number][]): [number, number] => [
   hex.reduce((s, p) => s + p[0], 0) / hex.length,
   hex.reduce((s, p) => s + p[1], 0) / hex.length,
@@ -44,6 +51,7 @@ export default function MeetMap({
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const overlay = useRef<L.LayerGroup | null>(null);
+  const fitted = useRef("");
 
   useEffect(() => {
     if (!el.current || map.current) return;
@@ -91,7 +99,7 @@ export default function MeetMap({
 
     members.forEach((mb) => {
       L.polygon(mb.hex, { color: mb.color, weight: 2, fillColor: mb.color, fillOpacity: 0.35 })
-        .bindTooltip(mb.alias, { permanent: true, direction: "top", className: "member-label", offset: [0, -6] })
+        .bindTooltip(textEl(mb.alias), { permanent: true, direction: "top", className: "member-label", offset: [0, -6] })
         .addTo(g);
       points.push(...mb.hex);
     });
@@ -110,13 +118,18 @@ export default function MeetMap({
         title: v.name,
         keyboard: true,
       })
-        .bindTooltip(`${v.rank}. ${v.name}`, { direction: "right", offset: [12, 0] })
+        .bindTooltip(textEl(`${v.rank}. ${v.name}`), { direction: "right", offset: [12, 0] })
         .on("click", () => onSelect(v.venueId))
         .addTo(g);
       points.push([v.location.lat, v.location.lng]);
     });
 
-    if (points.length) m.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15 });
+    // Re-fit only when the set of points changes, so selecting a venue keeps the user's zoom.
+    const key = JSON.stringify(points);
+    if (points.length && key !== fitted.current) {
+      fitted.current = key;
+      m.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15 });
+    }
   }, [members, venues, selected, onSelect]);
 
   return <div ref={el} className="map" role="region" aria-label="Map of members' landmarks and suggested venues" />;
