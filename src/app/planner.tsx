@@ -54,12 +54,17 @@ function sourceNote(source: string): { text: string; warn: boolean } {
     return { text: "Dev mode: times are straight-line guesses, not real routes. Don't use these to decide.", warn: true };
   }
   if (source.includes("openrouteservice")) {
-    return { text: "Times from OpenRouteService on OpenStreetMap roads. Typical speeds, no live traffic, so rush hour will be slower.", warn: false };
+    // Exact attribution required by the HeiGIT terms (ORS_ATTRIBUTION in src/lib/routing.ts).
+    return {
+      text: "Typical speeds with no live traffic, so rush hour will be slower. © openrouteservice by HeiGIT | Data from OpenStreetMap",
+      warn: false,
+    };
   }
   if (source.includes("google")) return { text: "Times from Google Routes.", warn: false };
   if (source.startsWith("precomputed")) {
     const [, provider, built] = source.split(":");
-    return { text: `Times precomputed with ${provider} on ${built}.`, warn: false };
+    const credit = provider === "openrouteservice" ? " © openrouteservice by HeiGIT | Data from OpenStreetMap" : "";
+    return { text: `Times precomputed with ${provider} on ${built}.${credit}`, warn: false };
   }
   return { text: source, warn: false };
 }

@@ -94,6 +94,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 
 ## Provider strategy
 - MVP: ORS hosted free tier + OSM snapshots. Zero infra, zero cost.
+- ORS (HeiGIT account): base URL `https://api.heigit.org/openrouteservice`
+  (`ORS_BASE_URL` overrides). 3,500 matrix elements per request. Terms forbid
+  sending personal data, which is one more reason only H3 cell centres go out.
+  Results are CC-BY-SA 4.0; show "© openrouteservice by HeiGIT | Data from
+  OpenStreetMap" wherever ORS times appear (planner does this).
 - Public Overpass is offline-only: on 2026-10-05 three mirrors returned 504s
   or took 90-200 s within the same hour. Never call it on the request path.
 - Privacy upgrade: self-host OSRM (`table` service) or Valhalla on a small VPS

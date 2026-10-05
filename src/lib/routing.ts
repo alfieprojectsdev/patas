@@ -45,9 +45,19 @@ export function parseOrsMatrix(json: { durations?: (number | null)[][] }, n: num
  * ORS matrix: POST /v2/matrix/{profile}, locations as [lng, lat] (note order),
  * sources/destinations as indices into one combined locations array.
  * ORS ignores departure time — durations are typical, not traffic-aware.
- * TODO(claude-code): verify current free-tier matrix limits (elements per
- * request, requests/min) and chunk if n*m exceeds them.
+ *
+ * Limits (openrouteservice.org/restrictions, 2026-10-05): 3,500 origin ×
+ * destination elements per request. The API sends at most 10 × 30 = 300.
+ * Daily/per-minute quotas are per plan; check the HeiGIT dashboard before
+ * running scripts/precompute.ts.
+ *
+ * Terms (account.heigit.org/info/tos): no personal data in requests, so
+ * only H3 cell centres go out, never a member's landmark. Results are
+ * CC-BY-SA 4.0 and must be shown with ORS_ATTRIBUTION.
  */
+export const ORS_ATTRIBUTION = "© openrouteservice by HeiGIT | Data from OpenStreetMap";
+const ORS_BASE = process.env.ORS_BASE_URL || "https://api.heigit.org/openrouteservice";
+
 export const orsProvider: MatrixProvider = {
   name: "openrouteservice",
   supports: ["DRIVE", "WALK", "TWO_WHEELER"],
@@ -61,7 +71,7 @@ export const orsProvider: MatrixProvider = {
     const n = origins.length;
     const m = destinations.length;
 
-    const res = await fetch(`https://api.openrouteservice.org/v2/matrix/${profile}`, {
+    const res = await fetch(`${ORS_BASE}/v2/matrix/${profile}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: key },
       body: JSON.stringify({

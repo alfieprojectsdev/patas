@@ -5,6 +5,9 @@ import type { CostMatrix, Venue } from "./types";
  * Built offline by scripts/precompute.ts; at request time ranking is a lookup:
  * no routing API call, no coordinates sent anywhere.
  *
+ * Licence: tables built with openrouteservice are CC-BY-SA 4.0 (HeiGIT
+ * terms). Publishing one means publishing it under that licence, with credit.
+ *
  * Size check: ~1.5k cells × ~200 venues ≈ 300k entries per band. JSON is OK
  * for the MVP; switch to a packed Uint16 (minutes×10) binary if it grows.
  */
