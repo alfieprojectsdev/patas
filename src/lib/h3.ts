@@ -1,6 +1,6 @@
-import { cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
+import { cellToBoundary, cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
 import type { LatLng } from "./types";
-import { QC_BBOX } from "./scope.ts";
+import { QC_RING } from "./qc-boundary.ts";
 
 /**
  * H3 snapping — privacy quantization + precompute key.
@@ -21,20 +21,19 @@ export function cellCenter(cell: string): LatLng {
   return { lat, lng };
 }
 
+/** Hexagon outline as [lat, lng] pairs (Leaflet order), ~1 m precision. For display only. */
+export const cellPolygon = (cell: string): [number, number][] =>
+  cellToBoundary(cell).map(([lat, lng]) => [+lat.toFixed(5), +lng.toFixed(5)]);
+
 export const isValidOriginCell = (cell: string, res = H3_RES) =>
   isValidCell(cell) && getResolution(cell) === res;
 
 /**
- * Cells covering the service area. Uses the bbox for now (~3.6k cells at
- * res 9 — over-covers QC). TODO(claude-code): feed the OSM QC boundary
- * polygon instead (~1.5k cells) and reuse the resulting cell SET as the
- * in-scope test — cheaper than point-in-polygon (same trick Grab uses with
- * geohashes for road localisation).
+ * Cells whose centres fall inside the QC boundary polygon. These are the
+ * precompute origins. Buffer-zone origins (outside QC) aren't in the tables;
+ * the API routes those requests live.
+ * TODO(claude-code): add buffer cells to precompute if that path gets busy.
  */
 export function serviceAreaCells(res = H3_RES): string[] {
-  const b = QC_BBOX;
-  return polygonToCells(
-    [[b.south, b.west], [b.south, b.east], [b.north, b.east], [b.north, b.west]],
-    res,
-  );
+  return polygonToCells(QC_RING, res, true);
 }

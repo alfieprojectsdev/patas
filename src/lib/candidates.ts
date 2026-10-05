@@ -1,21 +1,27 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Origin, Venue } from "./types";
 import { centroid, haversineKm } from "./scoring.ts";
 import { qcOverpassBbox, venueInScope } from "./scope.ts";
+import { snapToCell } from "./h3.ts";
 
 /**
- * Candidate venues: public places near the group, plus each member's
- * landmark as a "host at home/nearby" option.
+ * Candidate venues: public places that could be fair for the group, plus each
+ * member's landmark as a "host at home/nearby" option.
  *
- * The centroid is only a search SEED. The search radius covers the spread of
- * origins so the fair answer isn't excluded just because it's off-centre.
- *
- * Sources: Overpass (OSM, default) or Google Places (New).
- * Select with CANDIDATE_SOURCE=overpass|google.
+ * Sources (CANDIDATE_SOURCE):
+ *  - snapshot (default): data/qc-venues.json, built offline by
+ *    scripts/fetch-venues.ts. No network call, so members' cells go nowhere.
+ *    Public Overpass was too slow for the request path (504s and 90 s+
+ *    responses in the 2026-10-05 smoke test).
+ *  - overpass: live Overpass query around the group.
+ *  - google: Places API (New) searchNearby.
  * TODO(claude-code): add a curated allowlist (school, public libraries) per city.
  */
 
 type SearchArea = { lat: number; lng: number; radiusM: number };
 
+/** Centroid + radius covering the origins' spread. Only for the live sources. */
 export function searchArea(origins: Origin[]): SearchArea {
   const pts = origins.map((o) => o.landmark);
   const seed = centroid(pts);
@@ -34,13 +40,74 @@ function hostOptions(origins: Origin[]): Venue[] {
 }
 
 export async function findCandidates(origins: Origin[], max = 20): Promise<Venue[]> {
-  const area = searchArea(origins);
+  const src = process.env.CANDIDATE_SOURCE ?? "snapshot";
   const publicVenues =
-    process.env.CANDIDATE_SOURCE === "google"
-      ? await googlePlaces(area, max)
-      : await overpass(area, max);
+    src === "google" ? await googlePlaces(searchArea(origins), max)
+    : src === "overpass" ? await overpass(searchArea(origins), max)
+    : pickCandidates(loadSnapshot(), origins, max);
   // QC-only scope: drop venues (incl. host options) outside the service area.
   return [...publicVenues, ...hostOptions(origins)].filter((v) => venueInScope(v.location));
+}
+
+// ---------- Snapshot + selection ----------
+
+/** Lower = preferred when several venues share one H3 cell (e.g. a mall and its food court). */
+const CATEGORY_RANK: Record<string, number> = {
+  library: 0, community_centre: 1, coworking: 2, "shop:mall": 3, cafe: 4, fast_food: 5, restaurant: 6,
+};
+const rank = (v: Venue) => CATEGORY_RANK[v.tags[0]] ?? 9;
+
+/**
+ * Pure: one venue per res-9 cell, keeping the best category. Venues in the
+ * same ~200 m cell have near-identical travel times, so extras only burn
+ * matrix elements.
+ */
+export function dedupeByCell(pool: Venue[]): Venue[] {
+  const best = new Map<string, Venue>();
+  for (const v of pool) {
+    const c = snapToCell(v.location);
+    const cur = best.get(c);
+    if (!cur || rank(v) < rank(cur)) best.set(c, v);
+  }
+  return [...best.values()];
+}
+
+/**
+ * Pure: the `max` venues with the smallest straight-line worst-case distance
+ * to any origin (ties → smaller total). A minimax proxy, so the shortlist sits
+ * where the fair answer is likely to be, not around the centroid.
+ *
+ * Road travel time can put the true optimum a few km from the straight-line
+ * one, so picks are kept at least `minSepKm` apart to cover a wider area
+ * instead of 20 venues on one block.
+ */
+export function pickCandidates(pool: Venue[], origins: Origin[], max: number, minSepKm = 0.4): Venue[] {
+  const pts = origins.map((o) => o.landmark);
+  const ranked = pool
+    .map((v) => {
+      const d = pts.map((p) => haversineKm(p, v.location));
+      return { v, worst: Math.max(...d), total: d.reduce((a, b) => a + b, 0) };
+    })
+    .sort((a, b) => a.worst - b.worst || a.total - b.total);
+  const picked: Venue[] = [];
+  for (const { v } of ranked) {
+    if (picked.length >= max) break;
+    if (picked.every((p) => haversineKm(p.location, v.location) >= minSepKm)) picked.push(v);
+  }
+  return picked;
+}
+
+export type VenueSnapshot = { source: string; osmBase: string; fetchedAt: string; venues: Venue[] };
+
+let snapshotCache: Venue[] | null = null;
+function loadSnapshot(): Venue[] {
+  if (!snapshotCache) {
+    const f = join(process.cwd(), process.env.VENUES_SNAPSHOT ?? "data/qc-venues.json");
+    if (!existsSync(f)) throw new Error("venue snapshot missing; run scripts/fetch-venues.ts");
+    const snap = JSON.parse(readFileSync(f, "utf8")) as VenueSnapshot;
+    snapshotCache = dedupeByCell(snap.venues);
+  }
+  return snapshotCache;
 }
 
 // ---------- Overpass (OSM) ----------
@@ -50,13 +117,18 @@ export async function findCandidates(origins: Origin[], max = 20): Promise<Venue
  * internet_access=wlan — kept in `tags` for UI filtering.
  * Note: OSM opening_hours coverage in PH is spotty; don't filter on it.
  */
+export const OVERPASS_FILTERS = [
+  `nwr["amenity"~"^(cafe|library|fast_food|restaurant|community_centre|coworking_space)$"]["name"]`,
+  `nwr["shop"="mall"]["name"]`,
+  `nwr["office"="coworking"]["name"]`,
+];
+
 export function overpassQuery(a: SearchArea, max: number): string {
   // around ∩ QC bbox (Overpass intersects chained spatial filters)
   const around = `(around:${a.radiusM},${a.lat.toFixed(6)},${a.lng.toFixed(6)})${qcOverpassBbox()}`;
   return `[out:json][timeout:25];
 (
-  nwr["amenity"~"^(cafe|library|fast_food|restaurant|community_centre)$"]["name"]${around};
-  nwr["shop"="mall"]["name"]${around};
+${OVERPASS_FILTERS.map((f) => `  ${f}${around};`).join("\n")}
 );
 out center tags ${Math.max(max * 5, 50)};`;
 }
@@ -70,33 +142,38 @@ export type OverpassEl = {
   tags?: Record<string, string>;
 };
 
-/** Pure: Overpass JSON → venues, nearest-to-seed first, capped. Exported for tests. */
-export function parseOverpass(json: { elements?: OverpassEl[] }, a: SearchArea, max: number): Venue[] {
-  const venues: (Venue & { d: number })[] = [];
+/** Pure: Overpass JSON → named venues, duplicates collapsed. tags[0] is the category. */
+export function overpassToVenues(json: { elements?: OverpassEl[] }): Venue[] {
+  const venues: Venue[] = [];
   const seen = new Set<string>();
   for (const el of json.elements ?? []) {
     const lat = el.lat ?? el.center?.lat;
     const lng = el.lon ?? el.center?.lon;
     const name = el.tags?.name;
     if (lat == null || lng == null || !name) continue;
+    // Not open to walk-in students: private access, or an institution's staff canteen.
+    if (el.tags?.access === "private" || el.tags?.access === "no" || /\bcanteen\b/i.test(name)) continue;
     const dedupe = `${name.toLowerCase()}|${lat.toFixed(3)}|${lng.toFixed(3)}`;
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);
     const t = el.tags ?? {};
-    const tags = [t.amenity, t.shop && `shop:${t.shop}`, t.internet_access && `wifi:${t.internet_access}`]
-      .filter(Boolean) as string[];
-    venues.push({
-      venueId: `osm:${el.type}/${el.id}`,
-      name,
-      location: { lat, lng },
-      tags,
-      d: haversineKm(a, { lat, lng }),
-    });
+    const category =
+      t.amenity === "coworking_space" || t.office === "coworking" ? "coworking"
+      : t.shop === "mall" ? "shop:mall"
+      : t.amenity; // matched the amenity filter (e.g. amenity=cafe + shop=bakery)
+    const tags = [category, t.internet_access && `wifi:${t.internet_access}`].filter(Boolean) as string[];
+    venues.push({ venueId: `osm:${el.type}/${el.id}`, name, location: { lat, lng }, tags });
   }
-  return venues
+  return venues;
+}
+
+/** Pure: Overpass JSON → venues, nearest-to-seed first, capped. Exported for tests. */
+export function parseOverpass(json: { elements?: OverpassEl[] }, a: SearchArea, max: number): Venue[] {
+  return overpassToVenues(json)
+    .map((v) => ({ v, d: haversineKm(a, v.location) }))
     .sort((x, y) => x.d - y.d)
     .slice(0, max)
-    .map(({ d: _d, ...v }) => v);
+    .map((x) => x.v);
 }
 
 /**
@@ -104,7 +181,7 @@ export function parseOverpass(json: { elements?: OverpassEl[] }, a: SearchArea, 
  * not for real traffic. Set OVERPASS_URL to a self-hosted/paid instance later.
  */
 async function overpass(a: SearchArea, max: number): Promise<Venue[]> {
-  const url = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
+  const url = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -114,6 +191,7 @@ async function overpass(a: SearchArea, max: number): Promise<Venue[]> {
     },
     body: new URLSearchParams({ data: overpassQuery(a, max) }),
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`Overpass ${res.status}`);
   return parseOverpass(await res.json(), a, max);
@@ -141,6 +219,7 @@ async function googlePlaces(a: SearchArea, max: number): Promise<Venue[]> {
       },
     }),
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`Places API ${res.status}`);
   const data: {

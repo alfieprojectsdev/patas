@@ -1,11 +1,12 @@
 import type { CostMatrix, LatLng, TravelMode } from "./types";
+import { haversineKm } from "./scoring.ts";
 
 /**
  * Provider seam. Default is OpenRouteService (OSM data, free tier) for the
  * MVP; Google is a fallback; self-hosted OSRM/Valhalla is the privacy upgrade
  * (coords never leave our server); a Sakay.ph-backed provider is the intended
  * TRANSIT upgrade if a data partnership happens.
- * Select with ROUTING_PROVIDER=ors|google (default ors).
+ * Select with ROUTING_PROVIDER=ors|google|estimate (default ors; estimate = no-key dev mode).
  */
 export interface MatrixProvider {
   name: string;
@@ -44,9 +45,19 @@ export function parseOrsMatrix(json: { durations?: (number | null)[][] }, n: num
  * ORS matrix: POST /v2/matrix/{profile}, locations as [lng, lat] (note order),
  * sources/destinations as indices into one combined locations array.
  * ORS ignores departure time — durations are typical, not traffic-aware.
- * TODO(claude-code): verify current free-tier matrix limits (elements per
- * request, requests/min) and chunk if n*m exceeds them.
+ *
+ * Limits (openrouteservice.org/restrictions, 2026-10-05): 3,500 origin ×
+ * destination elements per request. The API sends at most 10 × 30 = 300.
+ * Daily/per-minute quotas are per plan; check the HeiGIT dashboard before
+ * running scripts/precompute.ts.
+ *
+ * Terms (account.heigit.org/info/tos): no personal data in requests, so
+ * only H3 cell centres go out, never a member's landmark. Results are
+ * CC-BY-SA 4.0 and must be shown with ORS_ATTRIBUTION.
  */
+export const ORS_ATTRIBUTION = "© openrouteservice by HeiGIT | Data from OpenStreetMap";
+const ORS_BASE = process.env.ORS_BASE_URL || "https://api.heigit.org/openrouteservice";
+
 export const orsProvider: MatrixProvider = {
   name: "openrouteservice",
   supports: ["DRIVE", "WALK", "TWO_WHEELER"],
@@ -60,7 +71,7 @@ export const orsProvider: MatrixProvider = {
     const n = origins.length;
     const m = destinations.length;
 
-    const res = await fetch(`https://api.openrouteservice.org/v2/matrix/${profile}`, {
+    const res = await fetch(`${ORS_BASE}/v2/matrix/${profile}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: key },
       body: JSON.stringify({
@@ -70,14 +81,42 @@ export const orsProvider: MatrixProvider = {
         metrics: ["duration"],
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) throw new Error(`ORS ${res.status}`); // no body echo
     return parseOrsMatrix(await res.json(), n, m);
   },
 };
 
+// ---------- Straight-line estimate (dev only) ----------
+
+/**
+ * Lets the app run end to end with no API key: haversine km × a detour factor
+ * ÷ a flat speed. The speeds are placeholders, not measurements, so this is
+ * only for local development and demos, and the UI labels it as such. Never
+ * the default.
+ */
+const EST_DETOUR = 1.35;
+const EST_KMH: Partial<Record<TravelMode, number>> = { DRIVE: 20, TWO_WHEELER: 25, WALK: 4.5 };
+
+export function estimateMatrix(origins: LatLng[], destinations: LatLng[], mode: TravelMode): CostMatrix {
+  const kmh = EST_KMH[mode];
+  if (!kmh) throw new Error(`estimate does not support mode ${mode}`);
+  return origins.map((o) => destinations.map((d) => (haversineKm(o, d) * EST_DETOUR * 60) / kmh));
+}
+
+export const estimateProvider: MatrixProvider = {
+  name: "straight-line-estimate",
+  supports: ["DRIVE", "WALK", "TWO_WHEELER"],
+  minutes: async (o, d, m) => estimateMatrix(o, d, m),
+};
+
 export function getProvider(): MatrixProvider {
-  return process.env.ROUTING_PROVIDER === "google" ? googleProvider : orsProvider;
+  switch (process.env.ROUTING_PROVIDER) {
+    case "google": return googleProvider;
+    case "estimate": return estimateProvider;
+    default: return orsProvider;
+  }
 }
 
 /**
@@ -124,6 +163,7 @@ export async function travelMinutes(
       },
       body: JSON.stringify(body),
       cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
     },
   );
   if (!res.ok) throw new Error(`Routes API ${res.status}`); // no body echo: may contain coords

@@ -5,6 +5,9 @@ import type { CostMatrix, Venue } from "./types";
  * Built offline by scripts/precompute.ts; at request time ranking is a lookup:
  * no routing API call, no coordinates sent anywhere.
  *
+ * Licence: tables built with openrouteservice are CC-BY-SA 4.0 (HeiGIT
+ * terms). Publishing one means publishing it under that licence, with credit.
+ *
  * Size check: ~1.5k cells × ~200 venues ≈ 300k entries per band. JSON is OK
  * for the MVP; switch to a packed Uint16 (minutes×10) binary if it grows.
  */
@@ -29,6 +32,12 @@ export function lookup(table: PrecomputedTable, originCells: string[]): CostMatr
     const i = idx.get(c);
     return i == null ? table.venues.map(() => null) : table.minutes[i].slice();
   });
+}
+
+/** True if every origin cell has a row. Otherwise the caller should route live. */
+export function covers(table: PrecomputedTable, originCells: string[]): boolean {
+  const known = new Set(table.cells);
+  return originCells.every((c) => known.has(c));
 }
 
 /** Coarse band from a departure time, Asia/Manila. Placeholder buckets. */

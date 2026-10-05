@@ -4,9 +4,10 @@ High school groups pick where to meet so no one carries an unfair commute.
 Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product later.
 
 ## Scope: Quezon City only (MVP)
-- `src/lib/scope.ts`: venues must be in QC; origins allowed within a 5 km
-  buffer (QC-school students often live in Caloocan/San Mateo/Marikina).
-- Current check is a rough bbox — replace with the OSM QC boundary polygon.
+- `src/lib/scope.ts`: venues must be inside the OSM QC boundary (relation
+  106569, `src/lib/qc-boundary.ts`, regenerate with `npm run fetch:boundary`);
+  origins allowed within 5 km of it (QC-school students often live in
+  Caloocan/San Mateo/Marikina). Bbox is only a pre-filter.
 - Out-of-area error is generic (doesn't say which member).
 - Why QC-only helps:
   - Fares: tricycle fares are LGU-set, so ONE QC fare ordinance covers it.
@@ -25,11 +26,14 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   tables per (mode, time band). API uses a table if `PRECOMPUTED_DIR` has
   `<mode>_<band>.json`, else falls back to live routing. Response `source`
   says which.
-- Budget first: `--dry-run` prints elements/requests. Bbox gives ~3.6k cells;
-  the QC polygon cuts that to ~1.5k. Check provider quotas before a full run.
+- Budget first: `--dry-run` prints elements/requests. The QC polygon gives
+  1,506 cells. Check provider quotas before a full run.
+- Tables cover QC cells only; if any origin cell is missing (buffer-zone
+  member) the API routes live instead.
 - One traffic-aware Google build per band fixes ORS's no-traffic bias.
 - Open: host options in table mode need a cell→cell table; `data/venues.json`
-  (curated QC venues) doesn't exist yet — see `data/venues.example.json`.
+  (curated QC venues for precompute) doesn't exist yet. Don't feed it all of
+  `data/qc-venues.json` (3.2k venues × 1.5k cells is ~5M elements).
 
 ## Core idea (don't regress this)
 - NOT a centroid problem. The centroid is only a search seed for candidate venues.
@@ -55,18 +59,48 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `src/lib/routing.ts` — `MatrixProvider` seam. Default `orsProvider`
   (OpenRouteService, OSM data; DRIVE/WALK; TWO_WHEELER approximated as car;
   no TRANSIT, no traffic). `googleProvider` fallback. `ROUTING_PROVIDER` env.
-- `src/lib/candidates.ts` — Overpass (OSM, default) or Google Places (New),
-  plus host options. `CANDIDATE_SOURCE` env. Parsers are pure + tested.
+- `src/lib/candidates.ts` — candidates from `data/qc-venues.json` (OSM
+  snapshot, default; no network call) or live Overpass / Google Places.
+  `CANDIDATE_SOURCE` env. Shortlist = one venue per H3 cell (best category),
+  then smallest straight-line worst-case distance, picks ≥400 m apart.
+- `src/lib/landmarks.ts` + `POST /api/landmarks` — landmark search over
+  `data/qc-landmarks.json` (stations, malls, schools, churches, barangay
+  halls, neighbourhoods). Snapshot stores H3 cells, not coordinates. POST so
+  the query never lands in access logs.
+- `scripts/fetch-{venues,landmarks,boundary}.ts` — rebuild the OSM snapshots
+  (`npm run fetch:venues` etc.). Overpass mirror fallback in `scripts/overpass.ts`.
+- `src/app/planner.tsx` — single-device planner UI. Nicknames stay in the
+  browser; the API sees m1..mN.
+- `src/app/map.tsx` — Leaflet + protomaps-leaflet. Basemap is a self-hosted
+  Metro Manila PMTiles extract in `public/tiles/` (gitignored, ~39 MB,
+  `npm run fetch:tiles`, needs the go-pmtiles CLI). No third-party tile
+  server, so nobody outside sees which area a member is viewing. Members are
+  drawn as their H3 cell; the landmarks API returns the cell outline.
+  protomaps-leaflet reads Leaflet from `window.L`; load the map with
+  next/dynamic, ssr:false.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
 - `src/app/api/meet/route.ts` — POST endpoint, zod-validated.
 - `supabase/migrations/0001_init.sql` — groups, members, meetings, burdens (no location).
 
 ## Commands
 - `npm test` — node:test via --experimental-strip-types (Node ≥22.6)
-- `npm run dev` — needs GOOGLE_MAPS_API_KEY in `.env.local`
+- `npm run dev` — needs ORS_API_KEY in `.env.local` (or
+  `ROUTING_PROVIDER=estimate` for fake straight-line times, dev only)
+- `npm run smoke` — live check of candidates + routing with public landmarks
+- `npm run screenshots` — README images via playwright-core + installed Edge,
+  against a production build (`next start`), not the dev server
+- Don't run `next build` while `next dev` is running: they share `.next`
+  and the dev page stops hydrating (chunk 404s).
 
 ## Provider strategy
-- MVP: ORS hosted free tier + public Overpass. Zero infra, zero cost.
+- MVP: ORS hosted free tier + OSM snapshots. Zero infra, zero cost.
+- ORS (HeiGIT account): base URL `https://api.heigit.org/openrouteservice`
+  (`ORS_BASE_URL` overrides). 3,500 matrix elements per request. Terms forbid
+  sending personal data, which is one more reason only H3 cell centres go out.
+  Results are CC-BY-SA 4.0; show "© openrouteservice by HeiGIT | Data from
+  OpenStreetMap" wherever ORS times appear (planner does this).
+- Public Overpass is offline-only: on 2026-10-05 three mirrors returned 504s
+  or took 90-200 s within the same hour. Never call it on the request path.
 - Privacy upgrade: self-host OSRM (`table` service) or Valhalla on a small VPS
   (PH extract) so minors' coordinates never leave our server. Add as a new
   `MatrixProvider`; Vercel can't host it.
@@ -76,11 +110,15 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   self-hosted Nominatim, or Google Places Autocomplete.
 
 ## Known gaps / next steps (in order)
-1. Smoke-test ORS + Overpass live with real keys (unit tests use fixtures only).
-   Verify ORS free-tier matrix limits and Routes API limits; chunk if needed.
+1. Smoke-test ORS with a real key (`npm run smoke`). Overpass is done (see
+   Provider strategy). Verify ORS free-tier matrix limits and Routes API
+   limits; chunk if needed.
 2. Curated venue allowlist (school, public libraries) — neither OSM nor Google
-   knows "lets students stay 4 hrs".
-3. MVP UI per `src/app/page.tsx` TODOs. Join code, no accounts.
+   knows "lets students stay 4 hrs". OSM snapshot already drops
+   access=private and staff canteens.
+3. Join-code flow (`src/app/page.tsx` TODOs). Open question: where members'
+   cells wait until everyone has joined, given "coordinates only in request
+   scope". Single-device planner works today.
 4. RLS policies + scheduled purge of expired groups.
 5. Fares: LTFRB matrices, student discount, rail station-pair tables.
 6. PH transit is the weak link: Google under-models jeepney/UV/tricycle.
