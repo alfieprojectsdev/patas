@@ -1,4 +1,4 @@
-import { cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
+import { cellToBoundary, cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
 import type { LatLng } from "./types";
 import { QC_RING } from "./qc-boundary.ts";
 
@@ -20,6 +20,10 @@ export function cellCenter(cell: string): LatLng {
   const [lat, lng] = cellToLatLng(cell);
   return { lat, lng };
 }
+
+/** Hexagon outline as [lat, lng] pairs (Leaflet order), ~1 m precision. For display only. */
+export const cellPolygon = (cell: string): [number, number][] =>
+  cellToBoundary(cell).map(([lat, lng]) => [+lat.toFixed(5), +lng.toFixed(5)]);
 
 export const isValidOriginCell = (cell: string, res = H3_RES) =>
   isValidCell(cell) && getResolution(cell) === res;

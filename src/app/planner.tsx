@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+
+// Leaflet needs `window`, so the map only renders in the browser.
+const MeetMap = dynamic(() => import("./map"), { ssr: false, loading: () => <div className="map" /> });
 
 /**
  * Single-device planner (MVP step 1): one person enters each member's
@@ -14,7 +18,7 @@ import { useEffect, useId, useRef, useState } from "react";
  * has joined; see CLAUDE.md privacy rules).
  */
 
-type Landmark = { name: string; kind: string; area: string; cell: string };
+type Landmark = { name: string; kind: string; area: string; cell: string; hex: [number, number][] };
 type Member = { key: number; alias: string; landmark: Landmark | null };
 type Mode = "DRIVE" | "TWO_WHEELER" | "WALK";
 type Result = {
@@ -60,6 +64,27 @@ function sourceNote(source: string): { text: string; warn: boolean } {
   return { text: source, warn: false };
 }
 
+// Categorical slots in fixed order (dataviz reference palette, validated for
+// both modes). Every member is also labelled by name on the map and in the
+// bars, so colour is never the only cue. Members 9-10 get neutral grey.
+const MEMBER_COLORS = {
+  light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"],
+  dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"],
+};
+const OVERFLOW_COLOR = "#8a8a84";
+
+function useDarkMode() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    setDark(mq.matches);
+    const on = (e: MediaQueryListEvent) => setDark(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return dark;
+}
+
 let nextKey = 3;
 
 export default function Planner() {
@@ -72,6 +97,9 @@ export default function Planner() {
   const [source, setSource] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const dark = useDarkMode();
+  const colorOf = (i: number) => MEMBER_COLORS[dark ? "dark" : "light"][i] ?? OVERFLOW_COLOR;
 
   const update = (key: number, patch: Partial<Member>) => {
     setMembers((ms) => ms.map((m) => (m.key === key ? { ...m, ...patch } : m)));
@@ -99,6 +127,7 @@ export default function Planner() {
         return;
       }
       setResults(data.results);
+      setSelected(data.results[0]?.venueId ?? null);
       setSource(data.source);
     } catch {
       setError("Couldn't reach Patas. Check your connection.");
@@ -113,6 +142,16 @@ export default function Planner() {
     r.venueId.startsWith("member:") ? `Near ${aliasOf(memberIndex(r.venueId.slice(7)))}'s landmark` : r.name;
   const note = source ? sourceNote(source) : null;
 
+  const mapMembers = useMemo(
+    () => members.flatMap((m, i) => (m.landmark ? [{ alias: aliasOf(i), color: colorOf(i), hex: m.landmark.hex }] : [])),
+    [members, dark],
+  );
+  const mapVenues = useMemo(
+    () => (results ?? []).map((r, i) => ({ venueId: r.venueId, rank: i + 1, name: venueName(r), location: r.location })),
+    [results, members],
+  );
+  const select = useCallback((id: string) => setSelected(id), []);
+
   return (
     <div className="planner">
       <section aria-labelledby="who">
@@ -125,10 +164,14 @@ export default function Planner() {
           {members.map((m, i) => (
             <li key={m.key} className="member">
               <label className="field">
-                <span>Nickname</span>
+                <span>
+                  <i className="swatch" style={{ background: colorOf(i) }} aria-hidden="true" />
+                  Nickname
+                </span>
                 <input
                   value={m.alias}
                   maxLength={20}
+                  spellCheck={false}
                   placeholder={`Member ${i + 1}`}
                   onChange={(e) => update(m.key, { alias: e.target.value })}
                 />
@@ -189,6 +232,10 @@ export default function Planner() {
       {!ready && <p className="hint">Every member needs a landmark first.</p>}
       {error && <p className="error" role="alert">{error}</p>}
 
+      {mapMembers.length > 0 && (
+        <MeetMap members={mapMembers} venues={mapVenues} selected={selected} onSelect={select} />
+      )}
+
       {results && (
         <section aria-labelledby="res" className="results">
           <h2 id="res">Fairest spots</h2>
@@ -197,7 +244,11 @@ export default function Planner() {
           {results.length === 0 && <p>No venue was reachable for everyone. Try a different travel mode.</p>}
           <ol className="venues">
             {results.map((r) => (
-              <li key={r.venueId} className="venue">
+              <li
+                key={r.venueId}
+                className={r.venueId === selected ? "venue on" : "venue"}
+                onClick={() => setSelected(r.venueId)}
+              >
                 <div className="venue-head">
                   <h3>
                     {r.location ? (
@@ -215,13 +266,21 @@ export default function Planner() {
                   <span className="tag">{CATEGORY[r.tags[0]] ?? r.tags[0]}</span>
                   {r.tags.some((t) => t.startsWith("wifi:") && t !== "wifi:no") && <span className="tag">Wi-Fi listed</span>}
                 </div>
+                {r.venueId !== selected && (
+                  <button type="button" className="link" onClick={() => setSelected(r.venueId)}>
+                    Show trips on map
+                  </button>
+                )}
                 <p className="stats">
                   Longest trip <strong>{r.worst} min</strong> · gap between longest and shortest {r.spread} min
                 </p>
                 <ul className="bars">
                   {r.perMember.map((p) => (
                     <li key={p.memberId}>
-                      <span className="who">{aliasOf(memberIndex(p.memberId))}</span>
+                      <span className="who">
+                        <i className="swatch" style={{ background: colorOf(memberIndex(p.memberId)) }} aria-hidden="true" />
+                        {aliasOf(memberIndex(p.memberId))}
+                      </span>
                       <span className="bar" aria-hidden="true">
                         <span style={{ width: `${(p.minutes / maxMinutes) * 100}%` }} />
                       </span>
@@ -319,6 +378,7 @@ function LandmarkPicker({ value, onChange }: { value: Landmark | null; onChange:
         aria-autocomplete="list"
         aria-activedescendant={open && options[active] ? `${id}-opt-${active}` : undefined}
         autoComplete="off"
+        spellCheck={false}
         placeholder="e.g. SM North, Katipunan station, Miriam College"
         value={q}
         onChange={(e) => setQ(e.target.value)}

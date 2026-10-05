@@ -4,3 +4,6 @@ node_modules/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# Self-hosted map tiles (39 MB; rebuild with npm run fetch:tiles)
+public/tiles/

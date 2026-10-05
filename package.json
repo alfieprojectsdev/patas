@@ -13,19 +13,25 @@
     "smoke": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/smoke.ts",
     "fetch:venues": "node --experimental-strip-types scripts/fetch-venues.ts",
     "fetch:landmarks": "node --experimental-strip-types scripts/fetch-landmarks.ts",
-    "fetch:boundary": "node --experimental-strip-types scripts/fetch-boundary.ts"
+    "fetch:boundary": "node --experimental-strip-types scripts/fetch-boundary.ts",
+    "fetch:tiles": "node --experimental-strip-types scripts/fetch-tiles.ts",
+    "screenshots": "node --experimental-strip-types scripts/screenshots.ts"
   },
   "dependencies": {
     "h3-js": "^4.5.0",
+    "leaflet": "^1.9.4",
     "next": "^15",
+    "protomaps-leaflet": "^5.1.0",
     "react": "^19",
     "react-dom": "^19",
     "zod": "^3"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "playwright-core": "^1.63.0",
     "typescript": "^5"
   },
   "engines": {
