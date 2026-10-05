@@ -31,6 +31,12 @@ export function lookup(table: PrecomputedTable, originCells: string[]): CostMatr
   });
 }
 
+/** True if every origin cell has a row. Otherwise the caller should route live. */
+export function covers(table: PrecomputedTable, originCells: string[]): boolean {
+  const known = new Set(table.cells);
+  return originCells.every((c) => known.has(c));
+}
+
 /** Coarse band from a departure time, Asia/Manila. Placeholder buckets. */
 export function bandFor(d: Date): TimeBand {
   const local = new Date(d.getTime() + 8 * 3600_000); // UTC+8, no DST

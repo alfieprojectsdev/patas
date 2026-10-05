@@ -7,7 +7,7 @@ import { getProvider } from "@/lib/routing";
 import { rankVenues } from "@/lib/scoring";
 import { originInScope } from "@/lib/scope";
 import { cellCenter, isValidOriginCell, snapToCell } from "@/lib/h3";
-import { bandFor, lookup, type PrecomputedTable } from "@/lib/precomputed";
+import { bandFor, covers, lookup, type PrecomputedTable } from "@/lib/precomputed";
 import type { CostMatrix, Origin, Venue } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -53,7 +53,7 @@ function loadTable(mode: string, band: string): PrecomputedTable | null {
 }
 
 export async function POST(req: Request) {
-  const parsed = Body.safeParse(await req.json());
+  const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
   const { mode, priorBurden, departureTime } = parsed.data;
 
@@ -73,7 +73,9 @@ export async function POST(req: Request) {
   }
 
   const depart = departureTime ? new Date(departureTime) : new Date();
-  const table = loadTable(mode, bandFor(depart));
+  // Tables cover cells inside QC only; a buffer-zone member forces live routing.
+  const loaded = loadTable(mode, bandFor(depart));
+  const table = loaded && covers(loaded, cells) ? loaded : null;
 
   let venues: Venue[];
   let matrix: CostMatrix;

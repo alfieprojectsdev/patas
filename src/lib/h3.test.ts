@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { snapToCell, cellCenter, isValidOriginCell, serviceAreaCells, H3_RES } from "./h3.ts";
 import { haversineKm } from "./scoring.ts";
-import { lookup, bandFor, type PrecomputedTable } from "./precomputed.ts";
+import { lookup, bandFor, covers, type PrecomputedTable } from "./precomputed.ts";
 
 const upd = { lat: 14.6537, lng: 121.0687 };
 
@@ -20,7 +20,7 @@ test("wrong resolution rejected", () => {
 test("service-area cells include UP Diliman's cell", () => {
   const cells = new Set(serviceAreaCells(H3_RES));
   assert.ok(cells.has(snapToCell(upd)));
-  assert.ok(cells.size > 1000 && cells.size < 5000);
+  assert.ok(cells.size > 1300 && cells.size < 1700); // polygon, not bbox (~3.6k)
 });
 
 test("lookup returns rows per origin; unknown cell → nulls", () => {
@@ -41,4 +41,11 @@ test("time bands in Manila time", () => {
   assert.equal(bandFor(new Date("2026-10-07T08:30:00Z")), "weekday_dismissal"); // Wed 16:30 PHT
   assert.equal(bandFor(new Date("2026-10-07T11:00:00Z")), "weekday_evening"); // Wed 19:00 PHT
   assert.equal(bandFor(new Date("2026-10-10T06:00:00Z")), "weekend_afternoon"); // Sat
+});
+
+test("covers: a buffer-zone cell not in the table means route live", () => {
+  const a = snapToCell(upd);
+  const t = { cells: [a] } as PrecomputedTable;
+  assert.ok(covers(t, [a]));
+  assert.equal(covers(t, [a, snapToCell({ lat: 14.6316, lng: 121.0838 })]), false);
 });
