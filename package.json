@@ -9,7 +9,11 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
-    "precompute": "node --experimental-strip-types scripts/precompute.ts"
+    "precompute": "node --experimental-strip-types scripts/precompute.ts",
+    "smoke": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/smoke.ts",
+    "fetch:venues": "node --experimental-strip-types scripts/fetch-venues.ts",
+    "fetch:landmarks": "node --experimental-strip-types scripts/fetch-landmarks.ts",
+    "fetch:boundary": "node --experimental-strip-types scripts/fetch-boundary.ts"
   },
   "dependencies": {
     "h3-js": "^4.5.0",

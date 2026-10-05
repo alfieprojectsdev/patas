@@ -1,0 +1,40 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { indexLandmarks, normalize, searchLandmarks, type Landmark } from "./landmarks.ts";
+import { estimateMatrix } from "./routing.ts";
+
+const L = (name: string, kind: Landmark["kind"], aka?: string[]): Landmark => ({ name, kind, area: "Quezon City", cell: "89694ec74dbffff", aka });
+const idx = indexLandmarks([
+  L("SM City North Edsa", "mall"),
+  L("SM City Caloocan", "mall", ["SM North Caloocan"]),
+  L("Katipunan station (LRT)", "station", ["LRT Katipunan"]),
+  L("Bulwagang Pambarangay ng Katipunan", "barangay_hall"),
+  L("Santo Niño Parish", "church"),
+]);
+const names = (q: string) => searchLandmarks(idx, q).map((l) => l.name);
+
+test("normalize strips accents and punctuation", () => {
+  assert.equal(normalize("Santo Niño Parish!"), "santo nino parish");
+});
+
+test("word-prefix match; a name match outranks an alias-only match", () => {
+  assert.deepEqual(names("sm nor"), ["SM City North Edsa", "SM City Caloocan"]);
+});
+
+test("stations rank above other kinds; alias finds the line", () => {
+  assert.deepEqual(names("katipunan"), ["Katipunan station (LRT)", "Bulwagang Pambarangay ng Katipunan"]);
+  assert.deepEqual(names("lrt kat"), ["Katipunan station (LRT)"]);
+});
+
+test("accent-insensitive; 1-char queries return nothing", () => {
+  assert.deepEqual(names("santo nino"), ["Santo Niño Parish"]);
+  assert.deepEqual(names("s"), []);
+});
+
+test("estimate: straight line × detour at a flat speed; no transit", () => {
+  const a = { lat: 14.65, lng: 121.0 };
+  const b = { lat: 14.65, lng: 121.1 }; // ≈ 10.76 km
+  const walk = estimateMatrix([a], [b], "WALK")[0][0]!;
+  assert.ok(Math.abs(walk - (10.76 * 1.35 * 60) / 4.5) < 1);
+  assert.throws(() => estimateMatrix([a], [b], "TRANSIT"));
+});
