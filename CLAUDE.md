@@ -71,6 +71,13 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   (`npm run fetch:venues` etc.). Overpass mirror fallback in `scripts/overpass.ts`.
 - `src/app/planner.tsx` — single-device planner UI. Nicknames stay in the
   browser; the API sees m1..mN.
+- `src/app/map.tsx` — Leaflet + protomaps-leaflet. Basemap is a self-hosted
+  Metro Manila PMTiles extract in `public/tiles/` (gitignored, ~39 MB,
+  `npm run fetch:tiles`, needs the go-pmtiles CLI). No third-party tile
+  server, so nobody outside sees which area a member is viewing. Members are
+  drawn as their H3 cell; the landmarks API returns the cell outline.
+  protomaps-leaflet reads Leaflet from `window.L`; load the map with
+  next/dynamic, ssr:false.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
 - `src/app/api/meet/route.ts` — POST endpoint, zod-validated.
 - `supabase/migrations/0001_init.sql` — groups, members, meetings, burdens (no location).
@@ -80,6 +87,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `npm run dev` — needs ORS_API_KEY in `.env.local` (or
   `ROUTING_PROVIDER=estimate` for fake straight-line times, dev only)
 - `npm run smoke` — live check of candidates + routing with public landmarks
+- `npm run screenshots` — README images via playwright-core + installed Edge,
+  against a production build (`next start`), not the dev server
+- Don't run `next build` while `next dev` is running: they share `.next`
+  and the dev page stops hydrating (chunk 404s).
 
 ## Provider strategy
 - MVP: ORS hosted free tier + OSM snapshots. Zero infra, zero cost.
