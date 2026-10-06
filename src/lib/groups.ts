@@ -122,8 +122,9 @@ export async function unsealOrigins(
   const { rows } = await db.query<{ id: string; alias: string; sealed_cell: Uint8Array }>(
     `select id, alias, sealed_cell from members
      where group_id = $1 and sealed_cell is not null and sealed_until > now()
-     order by joined_at, alias`,
-    [groupId],
+     order by joined_at, alias
+     limit $2`, // the join-time cap can be overshot by simultaneous joins; never rank more
+    [groupId, MAX_MEMBERS],
   );
   const origins = rows.flatMap((r) => {
     const cell = openCell(k, groupId, r.id, r.sealed_cell);

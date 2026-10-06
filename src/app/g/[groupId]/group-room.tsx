@@ -62,6 +62,9 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const colorIndex = useMemberColors();
+  // Read after mount, not during render, so hydration matches the server.
+  const [noKey, setNoKey] = useState(false);
+  useEffect(() => setNoKey(!new URLSearchParams(window.location.hash.slice(1)).get("k")), []);
 
   const refresh = useCallback(async () => {
     if (!k) return;
@@ -143,7 +146,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
   );
   const select = useCallback((id: string) => setSelected(id), []);
 
-  if (k === null && typeof window !== "undefined" && !window.location.hash.includes("k=")) {
+  if (noKey) {
     return <p className="error">This link is missing its key. Ask whoever shared it to send the whole link.</p>;
   }
   if (linkError) return <p className="error" role="alert">{linkError}</p>;

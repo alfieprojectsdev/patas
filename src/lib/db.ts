@@ -51,8 +51,18 @@ async function pgDb(url: string): Promise<Db> {
   const pool = new Pool({ connectionString: url, max: 5, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 });
   return {
     query: async (text, params) => ({ rows: (await pool.query(text, params)).rows }),
+    // One dedicated connection, rolled back on failure, so a failed script
+    // can't hand an aborted transaction back to the pool.
     exec: async (sql) => {
-      await pool.query(sql);
+      const c = await pool.connect();
+      try {
+        await c.query(sql);
+      } catch (e) {
+        await c.query("rollback").catch(() => {});
+        throw e;
+      } finally {
+        c.release();
+      }
     },
   };
 }
