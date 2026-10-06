@@ -233,6 +233,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
         <ResultsList
           results={results}
           source={source}
+          mode={mode}
           selected={selected}
           onSelect={setSelected}
           venueName={venueName}

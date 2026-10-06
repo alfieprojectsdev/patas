@@ -34,7 +34,7 @@ On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3
 
 <img src="docs/screenshots/3-phone-dark.png" alt="The same results on a phone in dark mode" width="320">
 
-The screenshots use real OpenRouteService driving times. Those assume no traffic, so rush-hour trips will take longer than shown.
+The screenshots use real OpenRouteService driving times, which assume clear roads. Next to each driving time, Patas shows a rough rush-hour range of 1.5 to 2 times that figure. The range comes from the [TomTom Traffic Index](https://www.tomtom.com/traffic-index/) averages for Metro Manila (about 21 km/h overall, 19 km/h at rush hour, against the 26–37 km/h that OpenRouteService implies across QC). It's a city-wide average, not live traffic, so it sets expectations without changing the ranking. Patas is for planning a meeting ahead of time, not live navigation.
 
 ## Privacy
 

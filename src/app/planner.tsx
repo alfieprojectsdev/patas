@@ -155,6 +155,7 @@ export default function Planner() {
         <ResultsList
           results={results}
           source={source}
+          mode={mode}
           selected={selected}
           onSelect={setSelected}
           venueName={venueName}
