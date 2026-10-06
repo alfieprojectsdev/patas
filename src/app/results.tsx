@@ -158,7 +158,7 @@ export function ResultsList({
               Longest trip <strong>{r.worst} min</strong>
               {rush && <> (about {range(r.worst)} min at rush hour)</>} · gap between longest and shortest {r.spread} min
             </p>
-            <ul className="bars">
+            <ul className={rush ? "bars rush" : "bars"}>
               {r.perMember.map((p) => (
                 <li key={p.memberId}>
                   <span className="who">
