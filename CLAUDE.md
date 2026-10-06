@@ -49,6 +49,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - Inputs are user-picked LANDMARKS, not home addresses.
 - Coordinates exist only in request scope. No lat/lng/address/landmark column in
   any table — reject schema changes that add one.
+  ONE agreed exception (2026-10-06): `members.sealed_cell`, an H3 cell sealed
+  with AES-256-GCM under a key derived from the group key K. K lives only in
+  the share link's #fragment and request bodies; the server stores sha256(K),
+  never K. Cleared 48 h after joining. Never return it, never log K.
 - Don't log request bodies or upstream error bodies (may contain coords).
 - API responses never include other members' landmarks; host options return
   `location: null`.
@@ -78,6 +82,18 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   drawn as their H3 cell; the landmarks API returns the cell outline.
   protomaps-leaflet reads Leaflet from `window.L`; load the map with
   next/dynamic, ssr:false.
+- Group links: `src/lib/seal.ts` (K checks, cell sealing, member tokens),
+  `src/lib/groups.ts` (create/join/status/unseal; same NOT_FOUND for a wrong
+  key and a missing group), `src/app/api/groups/**` (all POST, K in the body),
+  `src/app/g/[groupId]/` (page; K from `useHashParam`). Member edit tokens sit
+  in localStorage, stored server-side as sha256 only. Pattern taken from
+  washboard's `account-tokens.ts` / `use-hash-param.ts`.
+- `src/lib/meet.ts` — the ranking pipeline shared by `/api/meet` and group meet.
+- `src/lib/db.ts` — `pg` when `DATABASE_URL` is set; otherwise (dev only)
+  PGlite in `.data/pglite`. Migrations: `supabase/migrations/NNNN_*.sql`,
+  tracked in `schema_migrations`. Tests run the same files on in-memory PGlite.
+- `src/lib/rate-limit.ts` — Postgres fixed-window limiter on meet/create/join
+  (stores sha256 of the IP). Fails open; no database = no limit on /api/meet.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
 - `src/app/api/meet/route.ts` — POST endpoint, zod-validated.
 - `supabase/migrations/0001_init.sql` — groups, members, meetings, burdens (no location).
@@ -87,8 +103,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `npm run dev` — needs ORS_API_KEY in `.env.local` (or
   `ROUTING_PROVIDER=estimate` for fake straight-line times, dev only)
 - `npm run smoke` — live check of candidates + routing with public landmarks
+- `npm run db:migrate` / `npm run db:purge` — against `DATABASE_URL` (or local PGlite)
 - `npm run screenshots` — README images via playwright-core + installed Edge,
   against a production build (`next start`), not the dev server
+  (`PATAS_LOCAL_DB=1 npx next start` so group links use local PGlite; stop
+  `next dev` first since both would open `.data/pglite`)
 - Don't run `next build` while `next dev` is running: they share `.next`
   and the dev page stops hydrating (chunk 404s).
 
@@ -116,10 +135,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 2. Curated venue allowlist (school, public libraries) — neither OSM nor Google
    knows "lets students stay 4 hrs". OSM snapshot already drops
    access=private and staff canteens.
-3. Join-code flow (`src/app/page.tsx` TODOs). Open question: where members'
-   cells wait until everyone has joined, given "coordinates only in request
-   scope". Single-device planner works today.
-4. RLS policies + scheduled purge of expired groups.
+3. "We met here" → meetings + burdens rows, then send priorBurden (rotation).
+4. RLS: the app reaches Postgres only server-side via `pg`, so tables stay
+   RLS-enabled with no policies (deny-all for Supabase's anon/auth keys). Never
+   ship a Supabase client key. Purge runs opportunistically on group create
+   and via `npm run db:purge`.
 5. Fares: LTFRB matrices, student discount, rail station-pair tables.
 6. PH transit is the weak link: Google under-models jeepney/UV/tricycle.
    Intended upgrade is a Sakay.ph-backed `MatrixProvider` — approach their team
