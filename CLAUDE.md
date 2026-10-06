@@ -40,7 +40,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - Discrete facility location: candidates (public venues + each member's landmark
   as a host option) → n×m travel-time matrix → rank lexicographically:
   1. minimax (worst-off member), 2. spread (max−min), 3. total.
-  Near-ties within `tolerance` minutes fall through to the next objective.
+  Near-ties on 1 are tiers: venues within `tolerance` (default 2 min, ≈ H3
+  snap error) of the tier's best worst; inside a tier spread (whole minutes)
+  decides, then total. Tiers keep the order transitive; don't go back to a
+  pairwise tolerance compare.
 - Rotation: minimax over (prior cumulative burden + this meeting). Fairness is
   judged across meetings, not per meeting.
 - Time and pesos are separate objectives. Never blend them with an invented rate.
