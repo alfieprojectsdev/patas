@@ -6,7 +6,7 @@ import { QC_RING } from "./qc-boundary.ts";
  * H3 snapping — privacy quantization + precompute key.
  *
  * Res 9: avg edge ~200 m, area ~0.105 km². Max snap error ≈ one edge length
- * (~1–2 min drive), inside scoring's 5-min tie tolerance. Res 8 (~530 m edge)
+ * (~1–2 min drive), inside scoring's 2-min tie tolerance. Res 8 (~530 m edge)
  * can exceed it — don't drop below 9 without re-checking tolerance.
  *
  * Intended flow: the CLIENT snaps the landmark to a cell and sends only the

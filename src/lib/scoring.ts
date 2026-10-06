@@ -3,7 +3,7 @@ import type { CostMatrix, Venue, VenueScore } from "./types";
 /**
  * Fair-venue ranking. Pure function, no I/O — this is the part to unit test.
  *
- * Objective (lexicographic, with tolerance):
+ * Objective (lexicographic):
  *   1. minimize the worst-off member's burden          (minimax)
  *   2. then minimize spread (max - min) this meeting   (equity)
  *   3. then minimize total cost                        (efficiency)
@@ -12,9 +12,19 @@ import type { CostMatrix, Venue, VenueScore } from "./types";
  * meetings. Objective 1 then minimizes max(prior + current), which naturally
  * sends the venue toward whoever has travelled least so far.
  *
- * `tolerance` treats objective values within that margin as ties, so a
- * 1-minute minimax difference doesn't override a large spread/total gain.
+ * Near-ties on objective 1: venues are grouped into tiers. The first tier is
+ * every venue whose worst is within `tolerance` minutes of the best worst;
+ * the next tier starts from the best of the rest, and so on. Tiers come in
+ * order; inside a tier, spread (to the whole minute) decides, then total.
+ * Measuring from each tier's best keeps the order consistent, unlike a
+ * pairwise "within tolerance" check (A≈B and B≈C but A<C).
+ *
+ * Default tolerance 2 min ≈ the error from snapping landmarks to H3 res-9
+ * cells, so it only absorbs differences the input can't resolve. It was 5,
+ * which let a venue with a 2-minute-longer worst trip win on total alone.
  */
+export const DEFAULT_TOLERANCE = 2;
+
 export function rankVenues(
   venues: Venue[],
   cost: CostMatrix,
@@ -22,7 +32,7 @@ export function rankVenues(
 ): VenueScore[] {
   const n = cost.length;
   const prior = opts.priorBurden ?? new Array(n).fill(0);
-  const tol = opts.tolerance ?? 5;
+  const tol = opts.tolerance ?? DEFAULT_TOLERANCE;
 
   if (prior.length !== n) throw new Error("priorBurden length != members");
 
@@ -44,10 +54,25 @@ export function rankVenues(
     });
   });
 
-  const cmp = (a: number, b: number) => (Math.abs(a - b) <= tol ? 0 : a - b);
-  return scored.sort(
+  // Assign tiers by worst: each tier spans [its best worst, + tol].
+  const byWorst = [...scored].sort((a, b) => a.worst - b.worst);
+  const tier = new Map<VenueScore, number>();
+  let t = -1;
+  let floor = -Infinity;
+  for (const s of byWorst) {
+    if (s.worst > floor + tol) {
+      t++;
+      floor = s.worst;
+    }
+    tier.set(s, t);
+  }
+  return byWorst.sort(
     (a, b) =>
-      cmp(a.worst, b.worst) || cmp(a.spread, b.spread) || a.total - b.total,
+      tier.get(a)! - tier.get(b)! ||
+      Math.round(a.spread) - Math.round(b.spread) ||
+      a.total - b.total ||
+      a.worst - b.worst ||
+      a.venue.venueId.localeCompare(b.venue.venueId),
   );
 }
 

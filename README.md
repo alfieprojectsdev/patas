@@ -28,7 +28,7 @@ Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, comm
 2. then the smallest gap between the longest and shortest trip;
 3. then the smallest total travel time.
 
-Differences of 5 minutes or less count as ties and fall through to the next rule. The midpoint of everyone's locations is only used to start the search. It's rarely the fairest answer, because roads and traffic aren't symmetric.
+Longest trips within 2 minutes of the best one count as a tie, because snapping each landmark to a ~200 m cell can shift a trip by about that much. Among those, the smaller gap wins, then the smaller total. The midpoint of everyone's locations is only used to start the search. It's rarely the fairest answer, because roads and traffic aren't symmetric.
 
 On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3geo.org) cell), never an exact point. The numbered pins are the ranked venues, and the dashed lines show who travels to the selected one. They're straight lines, not routes.
 
