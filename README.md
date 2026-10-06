@@ -10,6 +10,8 @@ It covers Quezon City only for now. Members can start up to 5 km outside the cit
 
 Each member picks a public landmark near where they'll start: their school, an LRT/MRT station, a mall, a church or their barangay hall. Home addresses aren't an option, because the search only knows public places.
 
+There are two ways to do this. One person can enter everyone's landmarks on a single phone, or they can create a group link, send it to the group chat, and let each member add their own landmark on their own phone. With a group link, nobody in the group sees anyone else's landmark; they only see the results.
+
 <img src="docs/screenshots/1-pick-landmarks.png" alt="Landmark search: typing 'sm nor' suggests SM City North Edsa" width="560">
 
 Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, community centres, co-working spaces), gets each member's travel time to each one, and ranks them:
@@ -31,10 +33,12 @@ The screenshots were taken in estimate mode (see below), which is why they carry
 The people using this are minors, so the design keeps their locations out of everything that persists or leaves the server:
 
 - The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server.
+- A group link looks like `/g/<id>#k=<key>`. The key is made in the organiser's browser and sits after the `#`, which browsers never send to a server, so it can't end up in logs. The app passes it in request bodies instead.
+- Each member's cell is stored encrypted (AES-256-GCM) with a key derived from that link key, which the server never stores. A copy of the database alone reveals no locations. The cell is decrypted only in memory while ranking, is never sent back to anyone, and is deleted 48 hours after joining.
 - Nicknames stay in the browser. The API sees `m1`, `m2`, and so on.
 - Landmark search, candidate venues and map tiles are all served from local OpenStreetMap snapshots, so no third party sees what a member typed or which part of the city they're looking at.
 - The only outside call is the travel-time request to the routing provider, which gets cell centres, not landmarks.
-- Nothing location-related is logged or stored. The database schema in `supabase/migrations` has no location columns at all.
+- Nothing location-related is logged, and the only location data stored is those encrypted, expiring cells.
 
 ## Run it locally
 
@@ -70,11 +74,19 @@ npm run dev
 
 Open http://localhost:3000.
 
+Group links need a database. Locally they work with no setup: without `DATABASE_URL`, the dev server keeps a [PGlite](https://pglite.dev) database (Postgres compiled to WebAssembly) in `.data/`. For a real deployment, point `DATABASE_URL` at Postgres (Supabase's pooled connection string works) and apply the migrations:
+
+```bash
+npm run db:migrate
+```
+
 ## Useful commands
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (scoring, scope, H3, landmark search, OSM parsing) |
+| `npm test` | Unit tests (scoring, scope, H3, landmark search, OSM parsing, group links against PGlite) |
+| `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
+| `npm run db:purge` | Delete expired encrypted cells and groups (the app also does this as it runs) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
 | `npm run fetch:venues` | Rebuild `data/qc-venues.json` from OpenStreetMap |
 | `npm run fetch:landmarks` | Rebuild `data/qc-landmarks.json` |
@@ -84,9 +96,8 @@ Open http://localhost:3000.
 
 ## Status
 
-This is an MVP. It works on one device, where one person enters everyone's landmarks. Still to come:
+This is an MVP. Still to come:
 
-- a join code so each member picks their own landmark on their own phone;
 - "we met here", so the next search favours whoever travelled most last time;
 - jeepney, UV and train times, and fares;
 - a curated list of venues that actually let students stay for hours.
