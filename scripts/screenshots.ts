@@ -1,12 +1,15 @@
 /**
  * Regenerate the README screenshots in docs/screenshots/.
  *
- *   npm run build && ROUTING_PROVIDER=estimate npx next start -p 3100
+ *   npm run build && PATAS_LOCAL_DB=1 npx next start -p 3100
  *   SCREENSHOT_URL=http://localhost:3100 npm run screenshots
  *
  * Drives an installed Edge (SCREENSHOT_BROWSER=chrome for Chrome) through
  * playwright-core, so no browser download. Uses a production build: the dev
- * server adds its own badge to the page. Needs public/tiles (npm run fetch:tiles).
+ * server adds its own badge to the page. Needs public/tiles (npm run
+ * fetch:tiles). Travel times come from .env.local (ORS key, or
+ * ROUTING_PROVIDER=estimate). PATAS_LOCAL_DB=1 lets group links use the
+ * local PGlite database; stop `next dev` first, since both would open it.
  */
 import { mkdirSync } from "node:fs";
 import { chromium, type Browser, type BrowserContextOptions, type Page } from "playwright-core";
@@ -80,7 +83,7 @@ const desktop = { viewport: { width: 1000, height: 1200 }, deviceScaleFactor: 2,
 
 await withPage(browser, desktop, async (page) => {
   await fillGroup(page, true);
-  await shotBetween(page, "header", ".primary + .hint", `${OUT}/1-pick-landmarks.png`);
+  await shotBetween(page, ".planner", ".primary + .hint", `${OUT}/1-pick-landmarks.png`);
 });
 
 await withPage(browser, desktop, async (page) => {
@@ -95,6 +98,40 @@ await withPage(
     await fillGroup(page, false);
     await page.locator(".map").scrollIntoViewIfNeeded();
     await shotBetween(page, ".map", ".venue >> nth=0", `${OUT}/3-phone-dark.png`, 8);
+  },
+);
+
+/** Create a group link in the UI, join as member 1 through the form, the rest via the API (their own "phones"). */
+async function groupWithMembers(page: Page) {
+  await page.goto(BASE);
+  await page.getByRole("button", { name: "Create a group link" }).click();
+  await page.waitForURL(/\/g\/[0-9a-f-]+#k=/);
+  await page.getByPlaceholder("e.g. Bea").fill(GROUP[0].alias);
+  await page.locator(".join").getByRole("combobox").fill(GROUP[0].q);
+  await page.getByRole("option").filter({ hasText: GROUP[0].pick }).first().click();
+  await page.getByRole("button", { name: "Join" }).click();
+  await page.getByText("You're in as").waitFor();
+  await page.evaluate(async (others) => {
+    const k = new URLSearchParams(location.hash.slice(1)).get("k");
+    const id = location.pathname.split("/")[2];
+    const post = (url: string, body: unknown) =>
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+    for (const m of others) {
+      const { results } = await post("/api/landmarks", { q: m.q });
+      const cell = results.find((r: { name: string }) => r.name === m.pick).cell;
+      await post(`/api/groups/${id}/join`, { k, alias: m.alias, cell });
+    }
+  }, GROUP.slice(1));
+  await page.reload();
+  await page.locator(".roster li").nth(GROUP.length - 1).waitFor();
+}
+
+await withPage(
+  browser,
+  { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: "light" },
+  async (page) => {
+    await groupWithMembers(page);
+    await shotBetween(page, ".share", ".primary", `${OUT}/4-group-link.png`, 8);
   },
 );
 

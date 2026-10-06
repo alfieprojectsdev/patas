@@ -5,7 +5,9 @@ import { join } from "node:path";
  * Database access. Production: Postgres via `pg` (DATABASE_URL, e.g.
  * Supabase's pooled connection string). Local dev without DATABASE_URL:
  * PGlite (Postgres compiled to WASM) persisted in .data/pglite, so the group
- * flow works with no setup. Tests use an in-memory PGlite.
+ * flow works with no setup. Tests use an in-memory PGlite. PATAS_LOCAL_DB=1
+ * allows the PGlite fallback in a production build too, for local demos and
+ * README screenshots; never set it on a real server.
  *
  * Server-only: never import from a client component.
  */
@@ -75,7 +77,7 @@ export function getDb(): Promise<Db> | null {
   if (g.__patasDb) return g.__patasDb;
   const url = process.env.DATABASE_URL;
   if (url) g.__patasDb = pgDb(url);
-  else if (process.env.NODE_ENV !== "production") g.__patasDb = pgliteDb(join(process.cwd(), ".data", "pglite"));
+  else if (process.env.NODE_ENV !== "production" || process.env.PATAS_LOCAL_DB === "1") g.__patasDb = pgliteDb(join(process.cwd(), ".data", "pglite"));
   else return null;
   g.__patasDb.catch(() => (g.__patasDb = undefined)); // retry on the next request
   return g.__patasDb;

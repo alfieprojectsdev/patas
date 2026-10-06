@@ -106,6 +106,8 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `npm run db:migrate` / `npm run db:purge` — against `DATABASE_URL` (or local PGlite)
 - `npm run screenshots` — README images via playwright-core + installed Edge,
   against a production build (`next start`), not the dev server
+  (`PATAS_LOCAL_DB=1 npx next start` so group links use local PGlite; stop
+  `next dev` first since both would open `.data/pglite`)
 - Don't run `next build` while `next dev` is running: they share `.next`
   and the dev page stops hydrating (chunk 404s).
 
