@@ -82,7 +82,7 @@ npm run dev
 
 Open http://localhost:3000.
 
-Group links need a database. Locally they work with no setup: without `DATABASE_URL`, the dev server keeps a [PGlite](https://pglite.dev) database (Postgres compiled to WebAssembly) in `.data/`. For a real deployment, point `DATABASE_URL` at Postgres (Supabase's pooled connection string works) and apply the migrations:
+Group links need a database. Locally they work with no setup: without `DATABASE_URL`, the dev server keeps a [PGlite](https://pglite.dev) database (Postgres compiled to WebAssembly) in `.data/`. For a real deployment, point `DATABASE_URL` at Postgres (Neon's pooled connection string; see [docs/deploy.md](docs/deploy.md)) and apply the migrations:
 
 ```bash
 npm run db:migrate

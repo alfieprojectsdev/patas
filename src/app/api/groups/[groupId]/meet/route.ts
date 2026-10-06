@@ -6,6 +6,7 @@ import { LIMITS } from "@/lib/rate-limit";
 import { GroupIdZ, GroupKeyZ, badInput, dbFor, groupError } from "@/lib/group-api";
 
 export const runtime = "nodejs";
+export const maxDuration = 30; // routing call has a 20 s timeout
 
 /**
  * POST /api/groups/<id>/meet  { k, mode? } → same shape as /api/meet, with

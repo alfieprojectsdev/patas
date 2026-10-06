@@ -22,6 +22,10 @@ import { QC_RING } from "@/lib/qc-boundary";
 export type MapMember = { alias: string; color: string; hex: [number, number][] };
 export type MapVenue = { venueId: string; rank: number; name: string; location: { lat: number; lng: number } | null };
 
+// Same-origin by default. Set NEXT_PUBLIC_TILES_URL to serve the file from
+// object storage (it must answer HTTP range requests and allow CORS).
+const TILES_URL = process.env.NEXT_PUBLIC_TILES_URL || "/tiles/metro-manila.pmtiles";
+
 const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.54, 120.93], [14.83, 121.19]];
 const QC_LATLNGS = QC_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
 
@@ -64,7 +68,7 @@ export default function MeetMap({
       maxBounds: TILE_BOUNDS,
       maxBoundsViscosity: 0.8,
     });
-    leafletLayer({ url: "/tiles/metro-manila.pmtiles", flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
+    leafletLayer({ url: TILES_URL, flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
     L.polyline(QC_LATLNGS, { color: dark ? "#8fd3b4" : "#1f6f50", weight: 2, dashArray: "6 6", interactive: false }).addTo(m);
     overlay.current = L.layerGroup().addTo(m);
     map.current = m;

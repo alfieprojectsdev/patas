@@ -2,8 +2,8 @@ import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * Database access. Production: Postgres via `pg` (DATABASE_URL, e.g.
- * Supabase's pooled connection string). Local dev without DATABASE_URL:
+ * Database access. Production: Postgres via `pg` (DATABASE_URL: Neon's pooled
+ * connection string). Local dev without DATABASE_URL:
  * PGlite (Postgres compiled to WASM) persisted in .data/pglite, so the group
  * flow works with no setup. Tests use an in-memory PGlite. PATAS_LOCAL_DB=1
  * allows the PGlite fallback in a production build too, for local demos and
@@ -50,7 +50,7 @@ export async function pgliteDb(dataDir?: string): Promise<Db> {
 async function pgDb(url: string): Promise<Db> {
   const { Pool } = await import("pg");
   // Serverless functions each hold their own pool; keep it small.
-  const pool = new Pool({ connectionString: url, max: 5, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 });
+  const pool = new Pool({ connectionString: url, max: 5, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 15_000 }); // a suspended Neon database can take seconds to wake
   return {
     query: async (text, params) => ({ rows: (await pool.query(text, params)).rows }),
     // One dedicated connection, rolled back on failure, so a failed script

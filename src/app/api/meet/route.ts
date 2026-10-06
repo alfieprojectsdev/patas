@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { LIMITS, clientId, retryAfter } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+export const maxDuration = 30; // routing call has a 20 s timeout
 
 /**
  * POST /api/meet

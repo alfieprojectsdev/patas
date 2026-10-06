@@ -139,6 +139,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .note.rush { margin-top: -4px; }
 
 footer { margin-top: 40px; font-size: 0.8rem; color: var(--muted); }
+.prose h2 { margin-top: 28px; }
+.prose ul { padding-left: 20px; }
+.prose li { margin: 6px 0; }
 
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 

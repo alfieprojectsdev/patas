@@ -92,6 +92,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   in localStorage, stored server-side as sha256 only. Pattern taken from
   washboard's `account-tokens.ts` / `use-hash-param.ts`.
 - `src/lib/meet.ts` — the ranking pipeline shared by `/api/meet` and group meet.
+- Hosting: Vercel (`sin1`) + Neon Postgres (Singapore), deployed with the
+  Vercel CLI from this machine because the map file is gitignored. Steps in
+  `docs/deploy.md`. `supabase/migrations/` is just the folder name; there's no
+  Supabase in the stack.
 - `src/lib/db.ts` — `pg` when `DATABASE_URL` is set; otherwise (dev only)
   PGlite in `.data/pglite`. Migrations: `supabase/migrations/NNNN_*.sql`,
   tracked in `schema_migrations`. Tests run the same files on in-memory PGlite.
@@ -146,8 +150,8 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
    access=private and staff canteens.
 3. "We met here" → meetings + burdens rows, then send priorBurden (rotation).
 4. RLS: the app reaches Postgres only server-side via `pg`, so tables stay
-   RLS-enabled with no policies (deny-all for Supabase's anon/auth keys). Never
-   ship a Supabase client key. Purge runs opportunistically on group create
+   RLS-enabled with no policies (deny-all for any non-owner role). Never ship
+   database credentials to the client. Purge runs opportunistically on group create
    and via `npm run db:purge`.
 5. Fares: LTFRB matrices, student discount, rail station-pair tables.
 6. PH transit is the weak link: Google under-models jeepney/UV/tricycle.
