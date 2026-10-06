@@ -1,10 +1,10 @@
 import Planner from "./planner";
 import StartGroup from "./start-group";
 
-// MVP UI. Done: single-device planner (aliases + landmarks → top 5 venues).
+// MVP UI. Done: single-device planner, and group links (src/app/g/) where
+// each member adds their own landmark on their own phone.
 // TODO(claude-code), in order:
-//  1. Join code so each member picks their own landmark on their own phone.
-//  2. "We met here" → write meeting + burdens (minutes only) for rotation,
+//  1. "We met here" → write meeting + burdens (minutes only) for rotation,
 //     then send priorBurden on the next search.
 //  2. Option to hide others' minutes now that members use their own devices.
 export default function Home() {
