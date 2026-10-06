@@ -97,6 +97,8 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   tracked in `schema_migrations`. Tests run the same files on in-memory PGlite.
 - `src/lib/rate-limit.ts` — Postgres fixed-window limiter on meet/create/join
   (stores sha256 of the IP). Fails open; no database = no limit on /api/meet.
+- `src/lib/traffic.ts` — display-only rush-hour range (1.5–2× clear-road ORS
+  driving times, from TomTom Metro Manila averages). Never feeds ranking.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
 - `src/app/api/meet/route.ts` — POST endpoint, zod-validated.
 - `supabase/migrations/0001_init.sql` — groups, members, meetings, burdens (no location).
@@ -116,6 +118,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 
 ## Provider strategy
 - MVP: ORS hosted free tier + OSM snapshots. Zero infra, zero cost.
+- Patas is a PLANNING tool (pick a spot ahead of time), not live navigation.
+  Clear-road ORS times + the rush-hour range are the baseline and must keep
+  working on their own. Traffic-aware tables (Google Routes per time band via
+  precompute) are a value-add on top, never a dependency.
 - ORS (HeiGIT account): base URL `https://api.heigit.org/openrouteservice`
   (`ORS_BASE_URL` overrides). 3,500 matrix elements per request. Terms forbid
   sending personal data, which is one more reason only H3 cell centres go out.

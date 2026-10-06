@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { rushHourRange, showsRushHour } from "@/lib/traffic";
 
 /** Shared by the single-device planner and the group page. */
 
@@ -40,7 +41,7 @@ function sourceNote(source: string): { text: string; warn: boolean } {
   if (source.includes("openrouteservice")) {
     // Exact attribution required by the HeiGIT terms (ORS_ATTRIBUTION in src/lib/routing.ts).
     return {
-      text: "Typical speeds with no live traffic, so rush hour will be slower. © openrouteservice by HeiGIT | Data from OpenStreetMap",
+      text: "Times assume clear roads. © openrouteservice by HeiGIT | Data from OpenStreetMap",
       warn: false,
     };
   }
@@ -95,6 +96,7 @@ export function ModePicker({ mode, onChange }: { mode: Mode; onChange: (m: Mode)
 export function ResultsList({
   results,
   source,
+  mode,
   selected,
   onSelect,
   venueName,
@@ -103,6 +105,8 @@ export function ResultsList({
 }: {
   results: Result[];
   source: string;
+  /** The mode these results were computed for. */
+  mode: Mode;
   selected: string | null;
   onSelect: (venueId: string) => void;
   venueName: (r: Result) => string;
@@ -111,11 +115,19 @@ export function ResultsList({
 }) {
   const maxMinutes = Math.max(1, ...results.flatMap((r) => r.perMember.map((p) => p.minutes)));
   const note = source ? sourceNote(source) : null;
+  const rush = showsRushHour(source, mode);
+  const range = (m: number) => rushHourRange(m).join("–");
   return (
     <section aria-labelledby="res" className="results">
       <h2 id="res">Fairest spots</h2>
       <p className="hint">Ranked so the longest trip is as short as possible, then by how even the trips are.</p>
       {note && <p className={note.warn ? "note warn" : "note"}>{note.text}</p>}
+      {rush && (
+        <p className="note rush">
+          Rush hour: expect roughly 1.5 to 2 times these times. That's a Metro Manila-wide average from the TomTom
+          Traffic Index, not live traffic, and it doesn't change the ranking.
+        </p>
+      )}
       {results.length === 0 && <p>No venue was reachable for everyone. Try a different travel mode.</p>}
       <ol className="venues">
         {results.map((r) => (
@@ -143,7 +155,8 @@ export function ResultsList({
               </button>
             )}
             <p className="stats">
-              Longest trip <strong>{r.worst} min</strong> · gap between longest and shortest {r.spread} min
+              Longest trip <strong>{r.worst} min</strong>
+              {rush && <> (about {range(r.worst)} min at rush hour)</>} · gap between longest and shortest {r.spread} min
             </p>
             <ul className="bars">
               {r.perMember.map((p) => (
@@ -155,7 +168,10 @@ export function ResultsList({
                   <span className="bar" aria-hidden="true">
                     <span style={{ width: `${(p.minutes / maxMinutes) * 100}%` }} />
                   </span>
-                  <span className="min">{p.minutes} min</span>
+                  <span className="min">
+                    {p.minutes} min
+                    {rush && <small>{range(p.minutes)} rush</small>}
+                  </span>
                 </li>
               ))}
             </ul>
