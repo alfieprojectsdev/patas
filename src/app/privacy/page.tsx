@@ -1,3 +1,5 @@
+import Footer from "../footer";
+
 export const metadata = { title: "Privacy · Patas" };
 
 // Keep in step with CLAUDE.md "Privacy rules" and what the code actually stores.
@@ -35,6 +37,11 @@ export default function Privacy() {
           To stop abuse, Patas counts requests per device for up to a day, using a scrambled (hashed) form of your IP
           address, not the address itself.
         </li>
+        <li>
+          If you send feedback, Patas stores your message, the contact you chose to leave (if any), the kind of page you
+          were on and your browser type, and deletes it after 180 days. It may also be forwarded to the developer's private
+          Discord channel.
+        </li>
       </ul>
 
       <h2>Who else sees it</h2>
@@ -68,6 +75,7 @@ export default function Privacy() {
       <p className="hint">
         <a href="/">Back to Patas</a>
       </p>
+      <Footer />
     </main>
   );
 }
