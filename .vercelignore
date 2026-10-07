@@ -10,3 +10,5 @@ node_modules/
 .claude/
 .git/
 *.tsbuildinfo
+# The map file is fetched during the Vercel build (vercel-build script), not uploaded.
+public/tiles/

@@ -10,3 +10,6 @@ public/tiles/
 
 # Local dev database (PGlite), used when DATABASE_URL is unset
 .data/
+.vercel
+.env*
+!.env.example
