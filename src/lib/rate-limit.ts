@@ -12,6 +12,7 @@ export const LIMITS = {
   meet: { endpoint: "meet", max: 60, windowMs: 3600_000 }, // each call can spend ORS quota
   groupCreate: { endpoint: "group-create", max: 10, windowMs: 3600_000 },
   groupJoin: { endpoint: "group-join", max: 30, windowMs: 3600_000 },
+  feedback: { endpoint: "feedback", max: 5, windowMs: 3600_000 },
 } satisfies Record<string, Limit>;
 
 export function clientId(req: Request): string {

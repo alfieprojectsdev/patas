@@ -32,6 +32,7 @@ export async function purgeExpired(db: Db): Promise<void> {
   await db.query("update members set sealed_cell = null, sealed_until = null where sealed_until < now()");
   await db.query("delete from groups where expires_at < now()");
   await db.query("delete from rate_limits where window_start < now() - interval '1 day'");
+  await db.query("delete from feedback where created_at < now() - interval '180 days'"); // FEEDBACK_DAYS
 }
 
 export async function createGroup(db: Db, k: string): Promise<{ groupId: string; expiresAt: string }> {

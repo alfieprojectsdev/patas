@@ -140,6 +140,22 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 footer { margin-top: 40px; font-size: 0.8rem; color: var(--muted); }
 .prose h2 { margin-top: 28px; }
+dialog.feedback {
+  width: min(520px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg); color: var(--text);
+}
+dialog.feedback::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog.feedback h2 { margin-top: 0; }
+dialog.feedback form { display: grid; gap: 12px; }
+dialog.feedback fieldset { border: 0; padding: 0; margin: 0; }
+dialog.feedback textarea {
+  width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); resize: vertical;
+}
+.fb-actions { display: flex; align-items: center; gap: 16px; }
+.fb-actions .secondary { margin-top: 0; }
+.honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .prose ul { padding-left: 20px; }
 .prose li { margin: 6px 0; }
 
