@@ -30,6 +30,7 @@ export default function PinFinder({ onPick, onClose }: { onPick: (l: Landmark) =
   }, []);
 
   useEffect(() => {
+    setFailed(false);
     if (!cell) return setResults(null);
     const ctl = new AbortController();
     fetch("/api/landmarks", {
