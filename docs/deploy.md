@@ -20,7 +20,7 @@ The only manual steps are the two browser sign-ins and the one Porkbun DNS recor
 
 - PRs #3 (ranking tiers) and #4 (rush-hour range) merged into `main`.
 - `vercel.json` pins functions to `sin1` (Singapore). The two search routes allow 30 s, since the routing call can take up to 20 s.
-- `.vercelignore` makes `vercel deploy` upload `public/tiles/` but never `.env*`, `.data/`, `.next/` or `node_modules/`.
+- `.vercelignore` keeps `vercel deploy` uploads small and secret-free: it never sends `.env*`, `.data/`, `.next/`, `node_modules/` or `public/tiles/`. The map file is downloaded during the build by `vercel-build` (PR #6), so a build fails loudly if GitHub or Protomaps is unreachable at that moment.
 - `NEXT_PUBLIC_TILES_URL` can point the map at object storage (R2, Spaces) if Vercel won't serve the file with range requests. Unset = `/tiles/metro-manila.pmtiles`.
 - The database connection timeout is 15 s, because a suspended Neon database takes a few seconds to wake.
 - `/privacy`, linked from every footer, says what's stored, for how long, and who else sees what. The testers are minors, and the Data Privacy Act (RA 10173) expects that notice. It shows a contact email from `NEXT_PUBLIC_CONTACT_EMAIL`.
