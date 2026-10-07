@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import LandmarkPicker, { type Landmark } from "../../landmark-picker";
 import { ModePicker, ResultsList, useMemberColors, type Mode, type Result } from "../../results";
 import { useHashParam } from "../../use-hash-param";
+import { trackEvent } from "../../analytics";
 
 const MeetMap = dynamic(() => import("../../map"), { ssr: false, loading: () => <div className="map" /> });
 
@@ -103,6 +104,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
         memberToken,
       });
       if (!res.ok) return setJoinError(data.error ?? "Couldn't join.");
+      trackEvent(me ? "group-landmark-changed" : "group-joined", me ? "Group: landmark changed" : "Group: member joined");
       if (data.memberToken === memberToken) await refresh();
       else saveToken(data.memberToken); // new token → refresh() reruns
       setEditing(false);
@@ -126,6 +128,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
         return;
       }
       setResults(data.results);
+      trackEvent(`group-search-${mode.toLowerCase()}`, `Search, group link (${mode})`);
       setSelected(data.results[0]?.venueId ?? null);
       setSource(data.source);
     } catch {

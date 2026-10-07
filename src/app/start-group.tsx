@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "./analytics";
 
 /** base64url of 32 random bytes: the group key K, made here and never sent in a URL. */
 function newGroupKey(): string {
@@ -24,6 +25,7 @@ export default function StartGroup() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Couldn't create the group.");
+      trackEvent("group-created", "Group link created");
       window.location.assign(`/g/${data.groupId}#k=${k}`);
     } catch (e) {
       setError((e as Error).message || "Couldn't reach Patas. Check your connection.");

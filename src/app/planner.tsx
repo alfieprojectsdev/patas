@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import LandmarkPicker, { type Landmark } from "./landmark-picker";
+import { trackEvent } from "./analytics";
 import { ModePicker, ResultsList, useMemberColors, type Mode, type Result } from "./results";
 
 // Leaflet needs `window`, so the map only renders in the browser.
@@ -60,6 +61,7 @@ export default function Planner() {
         return;
       }
       setResults(data.results);
+      trackEvent(`search-${mode.toLowerCase()}`, `Search, one phone (${mode})`);
       setSelected(data.results[0]?.venueId ?? null);
       setSource(data.source);
     } catch {

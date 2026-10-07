@@ -44,8 +44,13 @@ export default function Privacy() {
           Travel times come from openrouteservice (HeiGIT, Germany). It receives the centre of each ~200 m area, not your
           landmark or nickname.
         </li>
-        <li>Landmark search, the list of places and the map are served by Patas itself, so no other company sees what you type or look at.</li>
+        <li>Landmark search, the list of places and the map are served by Patas itself, so no other company sees what you type or which part of the map you look at.</li>
         <li>The hosting company (Vercel) keeps standard request logs, such as page addresses and IP addresses, for a limited time.</li>
+        <li>
+          Page views and a few anonymous actions (a search was run, a group was created, someone joined) are counted with
+          GoatCounter, which uses no cookies. It sees the page address, with group links shortened so it never sees which
+          group, and never your nickname, landmark or results.
+        </li>
       </ul>
 
       <h2>Questions or deletion</h2>
