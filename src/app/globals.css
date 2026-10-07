@@ -210,3 +210,35 @@ dialog.feedback textarea {
 .join h2 { margin: 0; font-size: 1.05rem; }
 .join .full { grid-column: 1 / -1; }
 .join .cancel { margin-left: 12px; }
+
+.pin-link { justify-self: start; margin-top: 2px; }
+dialog.pin-finder {
+  width: min(640px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); padding: 16px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text);
+}
+dialog.pin-finder::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog.pin-finder h2 { margin: 0 0 4px; font-size: 1.1rem; }
+dialog.pin-finder .secondary { margin-top: 12px; }
+.pin-map-wrap { position: relative; margin-top: 8px; }
+.map.pin-map { height: min(50dvh, 420px); margin-top: 0; }
+.crosshair {
+  position: absolute; left: 50%; top: 50%; z-index: 500; width: 28px; height: 28px; margin: -14px 0 0 -14px;
+  border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.8); pointer-events: none;
+}
+.crosshair::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+  border-radius: 50%; background: var(--accent);
+}
+.nearby { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.nearby button {
+  display: block; width: 100%; padding: 8px 10px; text-align: left; color: var(--text); font-size: 0.95rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.nearby button:hover { background: var(--accent-soft); }
+.nearby small { display: block; color: var(--muted); font-size: 0.8rem; }
+.pin-warning {
+  margin: 8px 0; padding: 10px 12px; border-left: 4px solid var(--warn-text); border-radius: var(--radius);
+  background: var(--warn-bg); color: var(--warn-text); font-size: 0.9rem;
+}
+.pin-warning strong { display: block; font-size: 1rem; }
+.pin-warning p { margin: 4px 0 0; }
