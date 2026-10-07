@@ -19,8 +19,26 @@ export function clientId(req: Request): string {
   return sha256hex(`patas|${ip}`);
 }
 
+/** Longest a limit check may take before failing open, so a slow database never eats a search's time budget. */
+export const LIMIT_CHECK_MS = 2000;
+
 /** Seconds to wait if over the limit, else 0. */
 export async function retryAfter(db: Db, limit: Limit, client: string, now = new Date()): Promise<number> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const giveUp = new Promise<number>((resolve) => {
+    timer = setTimeout(() => {
+      console.error("rate limit check timed out");
+      resolve(0);
+    }, LIMIT_CHECK_MS);
+  });
+  try {
+    return await Promise.race([check(db, limit, client, now), giveUp]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function check(db: Db, limit: Limit, client: string, now: Date): Promise<number> {
   try {
     const windowStart = new Date(now.getTime() - limit.windowMs);
     const { rows } = await db.query<{ count: number; window_start: Date | string }>(

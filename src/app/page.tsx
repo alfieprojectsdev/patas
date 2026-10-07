@@ -18,7 +18,8 @@ export default function Home() {
       <StartGroup />
       <Planner />
       <footer>
-        Venue and landmark data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.
+        Venue and landmark data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.{" "}
+        <a href="/privacy">Privacy</a>
       </footer>
     </main>
   );

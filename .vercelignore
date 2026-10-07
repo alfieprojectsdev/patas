@@ -1,0 +1,12 @@
+# `vercel deploy` uploads this folder from disk. Unlike git, it must include
+# public/tiles/ (the gitignored map file), and must never include secrets
+# or local state.
+.env
+.env.*
+!.env.example
+.data/
+.next/
+node_modules/
+.claude/
+.git/
+*.tsbuildinfo

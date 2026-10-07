@@ -133,3 +133,10 @@ test("migrations are recorded and not re-applied", async () => {
   const d = await db();
   assert.deepEqual(await migrate(d), []);
 });
+
+test("rate limit check fails open when the database hangs", async () => {
+  const hung: Db = { query: () => new Promise(() => {}), exec: async () => {} };
+  const t0 = Date.now();
+  assert.equal(await retryAfter(hung, { endpoint: "x", max: 1, windowMs: 1000 }, "c"), 0);
+  assert.ok(Date.now() - t0 < 3000);
+});

@@ -14,7 +14,8 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
       </header>
       <GroupRoom groupId={groupId} />
       <footer>
-        Venue and landmark data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.
+        Venue and landmark data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.{" "}
+        <a href="/privacy">Privacy</a>
       </footer>
     </main>
   );
