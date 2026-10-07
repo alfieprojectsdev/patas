@@ -17,7 +17,8 @@
     "fetch:tiles": "node --experimental-strip-types scripts/fetch-tiles.ts",
     "screenshots": "node --experimental-strip-types scripts/screenshots.ts",
     "db:migrate": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/db.ts migrate",
-    "db:purge": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/db.ts purge"
+    "db:purge": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/db.ts purge",
+    "vercel-build": "node --experimental-strip-types scripts/fetch-tiles.ts && next build"
   },
   "dependencies": {
     "h3-js": "^4.5.0",
