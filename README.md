@@ -4,6 +4,8 @@ Patas picks a meeting spot for a high school group project so that nobody gets s
 
 It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of QC students live in Caloocan, Marikina or San Mateo.
 
+Try it at **https://patas.ithinkandicode.space**. It's a test version for a small group of students.
+
 ![Fairest spots for four members, with each person's trip drawn to the top pick](docs/screenshots/2-fair-spots.png)
 
 ## How it works
@@ -36,6 +38,12 @@ On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3
 
 The screenshots use real OpenRouteService driving times, which assume clear roads. Next to each driving time, Patas shows a rough rush-hour range of 1.5 to 2 times that figure. The range comes from the [TomTom Traffic Index](https://www.tomtom.com/traffic-index/) averages for Metro Manila (about 21 km/h overall, 19 km/h at rush hour, against the 26–37 km/h that OpenRouteService implies across QC). It's a city-wide average, not live traffic, so it sets expectations without changing the ranking. Patas is for planning a meeting ahead of time, not live navigation.
 
+## Feedback
+
+Every page has a **Feedback** link in the footer. It opens a short form: what kind of feedback it is, a message, and an optional way to reply. Submissions are stored in the database and can also ping a private Discord channel. The form asks people not to include addresses, phone numbers or full names.
+
+<img src="docs/screenshots/5-feedback.png" alt="The feedback form: something's wrong, an idea or other; a message; an optional contact" width="320">
+
 ## Privacy
 
 The people using this are minors, so the design keeps their locations out of everything that persists or leaves the server:
@@ -45,7 +53,9 @@ The people using this are minors, so the design keeps their locations out of eve
 - Each member's cell is stored encrypted (AES-256-GCM) with a key derived from that link key, which the server never stores. A copy of the database alone reveals no locations. The cell is decrypted only in memory while ranking, is never sent back to anyone, and is deleted 48 hours after joining.
 - On the single-phone planner, nicknames stay in the browser and the API sees `m1`, `m2`, and so on. With a group link, nicknames are stored so members can see who has joined, which is why the form asks for a nickname rather than a name.
 - Landmark search, candidate venues and map tiles are all served from local OpenStreetMap snapshots, so no third party sees what a member typed or which part of the city they're looking at.
-- The only outside call is the travel-time request to the routing provider, which gets cell centres, not landmarks.
+- Two outside services receive requests. The routing provider (openrouteservice) gets cell centres, not landmarks. [GoatCounter](https://www.goatcounter.com) counts page views and a few anonymous actions (a search, a group created, someone joined, feedback sent). It uses no cookies, and group pages are reported to it as `/g/_`, so it never learns which group.
+- Feedback is stored with the page path (no `?` or `#` part, group ids blanked) and the browser type, and deleted after 180 days.
+- The notice members actually read is at [/privacy](https://patas.ithinkandicode.space/privacy). It covers what's stored, for how long, and who sees what.
 - Nothing location-related is logged, and the only location data stored is those encrypted, expiring cells.
 
 ## Run it locally
@@ -90,22 +100,29 @@ npm run db:migrate
 
 ## Deploying
 
+Production runs on Vercel (functions in Singapore) with a Neon Postgres database, also in Singapore. Every push to `main` builds and deploys. Vercel runs the `vercel-build` script, which downloads the 39 MB map file during the build, so it never has to be in git or uploaded. The step-by-step setup is in [docs/deploy.md](docs/deploy.md).
+
 Set these on the host, since `.env.local` isn't deployed:
 
-- `ORS_API_KEY` for travel times;
-- `DATABASE_URL` for group links, then run `npm run db:migrate` against it once. Without it, the single-phone planner still works and group links answer "not set up".
+| Variable | Needed for |
+|---|---|
+| `ORS_API_KEY` | Travel times |
+| `DATABASE_URL` | Group links, feedback and rate limits (Neon's pooled connection string) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | The contact address on `/privacy` |
+| `FEEDBACK_WEBHOOK_URL` | Optional: a Discord webhook pinged for each feedback message |
+| `NEXT_PUBLIC_TILES_URL` | Optional: serve the map file from object storage instead |
 
-The map file (`public/tiles/metro-manila.pmtiles`, about 39 MB) is gitignored, so a deploy from git won't have it. Run `npm run fetch:tiles` as part of the build, or upload the file to the host.
+Apply new migrations to the database (`npm run db:migrate` with the direct connection string) before merging the code that needs them, because the merge deploys straight away. Without a database, the single-phone planner still works; group links and feedback say they're unavailable.
 
-With a database configured, searches, group creation and joins are rate-limited per client. Only a hash of the client's IP address is stored. Expired groups and landmarks are deleted as the app runs; `npm run db:purge` does the same on demand.
+With a database configured, searches (60 an hour), group creation (10), joins (30) and feedback (5) are limited per client. Only a hash of the client's IP address is stored. Expired groups, landmarks and old feedback are deleted as the app runs; `npm run db:purge` does the same on demand.
 
 ## Useful commands
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (scoring, scope, H3, landmark search, OSM parsing, group links against PGlite) |
+| `npm test` | Unit tests (scoring, scope, H3, landmark search, OSM parsing, rush-hour ranges, and group links and feedback against PGlite) |
 | `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
-| `npm run db:purge` | Delete expired encrypted cells and groups (the app also does this as it runs) |
+| `npm run db:purge` | Delete expired encrypted cells, groups and old feedback (the app also does this as it runs) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
 | `npm run fetch:venues` | Rebuild `data/qc-venues.json` from OpenStreetMap |
 | `npm run fetch:landmarks` | Rebuild `data/qc-landmarks.json` |

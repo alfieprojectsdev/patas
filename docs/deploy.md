@@ -8,11 +8,11 @@ Goal: a working public test build today, for a handful of real users (students).
 |---|---|---|
 | App | Vercel (Hobby), functions in `sin1` (Singapore) | Native Next.js hosting; Singapore is the closest region to Manila |
 | Database | Neon Postgres, `aws-ap-southeast-1` (Singapore) | Washboard already runs on Neon, and `src/lib/db.ts` uses the same `pg` setup |
-| Map tiles | The 39 MB PMTiles file shipped with the deployment | No extra service; verified after deploy (needs HTTP range requests) |
+| Map tiles | The 39 MB PMTiles file, downloaded during the Vercel build by the `vercel-build` script | No extra service and nothing big to upload; verified serving range requests (206) |
 | Travel times | OpenRouteService via your HeiGIT key | Already working locally |
 | DNS | Porkbun (`ithinkandicode.space` already uses Porkbun nameservers) | One CNAME record |
 
-Everything is provisioned from the command line (`neonctl`, `vercel`) so there's almost nothing to click. Deploy from this machine with `vercel deploy`, not from git: the map file is gitignored, so a git-triggered build wouldn't have it. Moving tiles to object storage and switching to git deploys can come later.
+Everything is provisioned from the command line (`neonctl`, `vercel`) so there's almost nothing to click. Since PR #6, Vercel builds from GitHub: every push to `main` deploys, and the `vercel-build` script downloads the map file during the build. That's what made deploying work at all from a flaky office connection, where `vercel deploy` uploads kept failing. `vercel redeploy <url> --target production` rebuilds without uploading anything, which is handy after changing an environment variable.
 
 The only manual steps are the two browser sign-ins and the one Porkbun DNS record (Porkbun's API needs separate API keys, so the web panel is faster for a single record).
 

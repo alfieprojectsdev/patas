@@ -70,6 +70,8 @@ async function shotBetween(page: Page, from: string, to: string, path: string, p
 
 async function withPage(browser: Browser, opts: BrowserContextOptions, fn: (p: Page) => Promise<void>) {
   const ctx = await browser.newContext(opts);
+  // Screenshots aren't visits: never load GoatCounter (it also hangs page loads on a bad connection).
+  await ctx.route(/gc\.zgo\.at|goatcounter\.com/, (r) => r.abort());
   try {
     await fn(await ctx.newPage());
   } finally {
@@ -132,6 +134,21 @@ await withPage(
   async (page) => {
     await groupWithMembers(page);
     await shotBetween(page, ".share", ".primary", `${OUT}/4-group-link.png`, 8);
+  },
+);
+
+await withPage(
+  browser,
+  { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: "light" },
+  async (page) => {
+    // Opens and fills the dialog without sending, so no row is written.
+    await page.goto(BASE);
+    await page.getByRole("button", { name: "Feedback" }).click();
+    const dialog = page.locator("dialog.feedback");
+    await dialog.getByLabel("An idea").check();
+    await dialog.locator("textarea").fill("Could it show jeepney routes too? Most of us commute.");
+    await dialog.screenshot({ path: `${OUT}/5-feedback.png` });
+    console.log(`wrote ${OUT}/5-feedback.png`);
   },
 );
 
