@@ -46,9 +46,9 @@ npx neonctl@latest auth
    ```
 2. Apply the schema once with the direct (unpooled) connection string:
    ```bash
-   DATABASE_URL="$(npx neonctl@latest connection-string --project-id <id>)" npm run db:migrate
+   U="$(npx neonctl@latest connection-string --project-id <id>)" && [ -n "$U" ] && DATABASE_URL="$U" npm run db:migrate
    ```
-   Expected output: `applied: 0001_init.sql, 0002_group_links.sql`.
+   Expected output: a `database:` line naming the Neon host, then `applied: 0001_init.sql, 0002_group_links.sql`. If it says `local PGlite`, the connection string wasn't fetched; run it again. (`db.ts` refuses an empty `DATABASE_URL` rather than quietly using the local database.)
 3. Create the Vercel project and set production variables. Values are piped in, so they never appear on screen:
    ```bash
    vercel link --yes --project patas
