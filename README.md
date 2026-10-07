@@ -12,6 +12,8 @@ Try it at **https://patas.ithinkandicode.space**. It's a test version for a smal
 
 Each member picks a public landmark near where they'll start: their school, an LRT/MRT station, a mall, a church or their barangay hall. Home addresses aren't an option, because the search only knows public places.
 
+When a place's OpenStreetMap name is hard to guess, **Can't find it? Look on the map** opens a map with a circle in the middle. Move the map until the circle is on your area and Patas lists up to five public landmarks within about 1.5 km, nearest first. The member still picks one of those. The spot on the map is never used as a starting point, so the map can't be used to enter a home.
+
 There are two ways to do this. One person can enter everyone's landmarks on a single phone, or they can create a group link and let each member add their own landmark on their own phone:
 
 1. Someone presses **Create a group link** on the home page and sends the link to the group chat. The page also has a share button and a QR code for people in the same room.
@@ -48,15 +50,26 @@ Every page has a **Feedback** link in the footer. It opens a short form: what ki
 
 The people using this are minors, so the design keeps their locations out of everything that persists or leaves the server:
 
-- The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server.
+- The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server. The map finder snaps the circle's position to a cell in the browser and sends only that cell id.
 - A group link looks like `/g/<id>#k=<key>`. The key is made in the organiser's browser and sits after the `#`, which browsers never send to a server, so it can't end up in logs. The app passes it in request bodies instead.
 - Each member's cell is stored encrypted (AES-256-GCM) with a key derived from that link key, which the server never stores. A copy of the database alone reveals no locations. The cell is decrypted only in memory while ranking, is never sent back to anyone, and is deleted 48 hours after joining.
 - On the single-phone planner, nicknames stay in the browser and the API sees `m1`, `m2`, and so on. With a group link, nicknames are stored so members can see who has joined, which is why the form asks for a nickname rather than a name.
 - Landmark search, candidate venues and map tiles are all served from local OpenStreetMap snapshots, so no third party sees what a member typed or which part of the city they're looking at.
-- Two outside services receive requests. The routing provider (openrouteservice) gets cell centres, not landmarks. [GoatCounter](https://www.goatcounter.com) counts page views and a few anonymous actions (a search, a group created, someone joined, feedback sent). It uses no cookies, and group pages are reported to it as `/g/_`, so it never learns which group.
+- Two outside services receive requests. The routing provider (openrouteservice) gets cell centres, not landmarks. [GoatCounter](https://www.goatcounter.com) counts page views and a few anonymous actions (a search, a group created, someone joined, a landmark picked from the map, feedback sent). It uses no cookies, and group pages are reported to it as `/g/_`, so it never learns which group.
 - Feedback is stored with the page path (no `?` or `#` part, group ids blanked) and the browser type, and deleted after 180 days.
 - The notice members actually read is at [/privacy](https://patas.ithinkandicode.space/privacy). It covers what's stored, for how long, and who sees what.
 - Nothing location-related is logged, and the only location data stored is those encrypted, expiring cells.
+
+### Design notes: the map finder
+
+The map finder doesn't let anyone use a dropped pin as a starting point. That's deliberate, and it's worth keeping:
+
+- A free pin would invite members, who are minors, to mark their own homes. The server and openrouteservice would see the same kind of data as now (one ~200 m cell), but that cell would be a home block instead of a mall.
+- The landmark list is what keeps homes out, because every starting point is a public place. The finder only exists for places whose OpenStreetMap name is hard to guess, like stylised or inconsistent spellings ("S&R" against "SNR").
+- The ~200 m blur is by design, and ranking is built around it: the 2-minute tie window is sized to the travel time that blur can add or remove. Results are approximate on purpose.
+- The finder says this in a warning box above the map, so members know the blur is intentional and don't try to place the circle precisely on their house.
+
+Don't add "use this exact spot", "use my location" (browser geolocation would land on a home most of the time) or a finer cell for the map. Any of these would break the public-places rule. A change like that needs a dated exception in `CLAUDE.md`, the way encrypted group cells got one.
 
 ## Run it locally
 

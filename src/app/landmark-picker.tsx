@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import PinFinder from "./pin-finder";
 
 /** A public landmark from /api/landmarks: its H3 cell and that cell's outline, never a point. */
 export type Landmark = { name: string; kind: string; area: string; cell: string; hex: [number, number][] };
@@ -12,6 +13,7 @@ export default function LandmarkPicker({ value, onChange }: { value: Landmark | 
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const [searched, setSearched] = useState("");
+  const [pinOpen, setPinOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export default function LandmarkPicker({ value, onChange }: { value: Landmark | 
   }, [q]);
 
   const pick = (l: Landmark) => {
+    setPinOpen(false);
     onChange(l);
     setQ("");
     setOptions([]);
@@ -130,7 +133,11 @@ export default function LandmarkPicker({ value, onChange }: { value: Landmark | 
           ))}
         </ul>
       )}
-      {open && q.trim().length >= 2 && searched === q && options.length === 0 && <p className="hint">No match. Try a nearby school or station.</p>}
+      {open && q.trim().length >= 2 && searched === q && options.length === 0 && <p className="hint">No match. Try another spelling, a nearby school or station, or look on the map.</p>}
+      <button type="button" className="link pin-link" onClick={() => setPinOpen(true)}>
+        Can&apos;t find it? Look on the map
+      </button>
+      {pinOpen && <PinFinder onPick={pick} onClose={() => setPinOpen(false)} />}
     </div>
   );
 }

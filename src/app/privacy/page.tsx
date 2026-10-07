@@ -52,9 +52,14 @@ export default function Privacy() {
           landmark or nickname.
         </li>
         <li>Landmark search, the list of places and the map are served by Patas itself, so no other company sees what you type or which part of the map you look at.</li>
+        <li>
+          If you look for a landmark on the map, your browser sends Patas the ~200 m area under the circle, never an exact
+          point, to list public places nearby. It isn't stored. You still pick one of those places; the spot on the map is
+          never used as your starting point.
+        </li>
         <li>The hosting company (Vercel) keeps standard request logs, such as page addresses and IP addresses, for a limited time.</li>
         <li>
-          Page views and a few anonymous actions (a search was run, a group was created, someone joined) are counted with
+          Page views and a few anonymous actions (a search was run, a group was created, someone joined, a landmark was picked from the map) are counted with
           GoatCounter, which uses no cookies. Like any website it loads from, it receives the page address (with group links
           shortened so it never sees which group), the previous page's address, your browser type, screen size and IP
           address. It never receives your nickname, landmark or results.

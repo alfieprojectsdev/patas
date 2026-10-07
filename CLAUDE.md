@@ -74,7 +74,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `src/lib/landmarks.ts` + `POST /api/landmarks` — landmark search over
   `data/qc-landmarks.json` (stations, malls, schools, churches, barangay
   halls, neighbourhoods). Snapshot stores H3 cells, not coordinates. POST so
-  the query never lands in access logs.
+  the query never lands in access logs. `{ cell }` instead of `{ q }` returns
+  the nearest landmarks (`nearbyLandmarks`, ≤6 rings ≈1.5 km) for the
+  "Look on the map" finder (`src/app/pin-finder.tsx`, `pin-map.tsx`). The pin
+  only finds landmarks; it must never become an origin itself (that's what
+  keeps home addresses out). The browser snaps the pin to a cell.
 - `scripts/fetch-{venues,landmarks,boundary}.ts` — rebuild the OSM snapshots
   (`npm run fetch:venues` etc.). Overpass mirror fallback in `scripts/overpass.ts`.
 - `src/app/planner.tsx` — single-device planner UI. Nicknames stay in the

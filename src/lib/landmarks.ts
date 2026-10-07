@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { cellToLatLng, greatCircleDistance, gridDiskDistances } from "h3-js";
 
 /**
  * Landmark search over a local OSM snapshot (data/qc-landmarks.json, built by
@@ -64,6 +65,52 @@ export function searchLandmarks(index: Indexed[], q: string, limit = 8): Landmar
     .sort((a, b) => a.score - b.score || kindRank(a.l.kind) - kindRank(b.l.kind) || a.l.name.length - b.l.name.length)
     .slice(0, limit)
     .map(({ l: { norm: _n, nameWords: _nw, allWords: _aw, ...rest } }) => rest);
+}
+
+/**
+ * How far "Find it on the map" looks: 6 rings of res-9 cells, centres ~300 m
+ * apart, so about 1.5–1.8 km. Past that a landmark is no help to the ranking.
+ */
+export const NEAR_RINGS = 6;
+
+const byCellCache = new WeakMap<readonly Landmark[], Map<string, Landmark[]>>();
+function byCell<T extends Landmark>(list: readonly T[]): Map<string, T[]> {
+  let m = byCellCache.get(list) as Map<string, T[]> | undefined;
+  if (!m) {
+    m = new Map();
+    for (const l of list) m.set(l.cell, [...(m.get(l.cell) ?? []), l]);
+    byCellCache.set(list, m);
+  }
+  return m;
+}
+
+/**
+ * Pure. Landmarks nearest a map pin's cell, for people who can't find a place
+ * by name ("SNR" vs "S&R"). The pin only helps pick a landmark; it is never an
+ * origin itself, so inputs stay public places. Sorted by distance between cell
+ * centres, then kind (stations and malls first), then shorter name.
+ */
+export function nearbyLandmarks<T extends Landmark>(
+  list: readonly T[],
+  cell: string,
+  limit = 5,
+  maxRing = NEAR_RINGS,
+): (T & { metres: number })[] {
+  const cells = byCell(list);
+  const [lat, lng] = cellToLatLng(cell);
+  const found: T[] = [];
+  // Once there are enough, read one more ring: hex rings overlap in distance.
+  let lastRing = maxRing;
+  for (const [k, ring] of gridDiskDistances(cell, maxRing).entries()) {
+    for (const c of ring) found.push(...(cells.get(c) ?? []));
+    if (lastRing === maxRing && found.length >= limit) lastRing = Math.min(k + 1, maxRing);
+    if (k >= lastRing) break;
+  }
+  const kindRank = (k: LandmarkKind) => LANDMARK_KINDS.indexOf(k);
+  return found
+    .map((l) => ({ ...l, metres: Math.round(greatCircleDistance([lat, lng], cellToLatLng(l.cell), "m") / 10) * 10 }))
+    .sort((a, b) => a.metres - b.metres || kindRank(a.kind) - kindRank(b.kind) || a.name.length - b.name.length)
+    .slice(0, limit);
 }
 
 let cache: Indexed[] | null = null;

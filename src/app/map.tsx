@@ -29,8 +29,17 @@ const TILES_URL = process.env.NEXT_PUBLIC_TILES_URL || "/tiles/metro-manila.pmti
 const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.54, 120.93], [14.83, 121.19]];
 const QC_LATLNGS = QC_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
 
+/** Basemap from our own tiles plus the dashed QC boundary. Shared by the results map and the pin picker. */
+export function createBaseMap(el: HTMLElement, view = { center: [14.65, 121.05] as [number, number], zoom: 12 }) {
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const m = L.map(el, { ...view, minZoom: 11, maxZoom: 18, maxBounds: TILE_BOUNDS, maxBoundsViscosity: 0.8 });
+  leafletLayer({ url: TILES_URL, flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
+  L.polyline(QC_LATLNGS, { color: dark ? "#8fd3b4" : "#1f6f50", weight: 2, dashArray: "6 6", interactive: false }).addTo(m);
+  return m;
+}
+
 /** Leaflet treats tooltip strings as HTML; nicknames and OSM names must go in as text. */
-const textEl = (s: string) => {
+export const textEl = (s: string) => {
   const el = document.createElement("span");
   el.textContent = s;
   return el;
@@ -59,17 +68,7 @@ export default function MeetMap({
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const m = L.map(el.current, {
-      center: [14.65, 121.05],
-      zoom: 12,
-      minZoom: 11,
-      maxZoom: 18,
-      maxBounds: TILE_BOUNDS,
-      maxBoundsViscosity: 0.8,
-    });
-    leafletLayer({ url: TILES_URL, flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
-    L.polyline(QC_LATLNGS, { color: dark ? "#8fd3b4" : "#1f6f50", weight: 2, dashArray: "6 6", interactive: false }).addTo(m);
+    const m = createBaseMap(el.current);
     overlay.current = L.layerGroup().addTo(m);
     map.current = m;
     return () => {
