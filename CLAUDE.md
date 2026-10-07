@@ -64,7 +64,8 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 ## Layout
 - `src/lib/scoring.ts` — pure ranking + centroid/haversine. Tested.
 - `src/lib/routing.ts` — `MatrixProvider` seam. Default `orsProvider`
-  (OpenRouteService, OSM data; DRIVE/WALK; TWO_WHEELER approximated as car;
+  (OpenRouteService, OSM data; DRIVE/WALK only: it has no motorcycle profile,
+  and faking one with car times was removed;
   no TRANSIT, no traffic). `googleProvider` fallback. `ROUTING_PROVIDER` env.
 - `src/lib/candidates.ts` — candidates from `data/qc-venues.json` (OSM
   snapshot, default; no network call) or live Overpass / Google Places.

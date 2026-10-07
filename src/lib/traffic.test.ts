@@ -9,7 +9,7 @@ test("rush-hour range is 1.5x to 2x, rounded", () => {
 
 test("range only for clear-road ORS driving times", () => {
   assert.ok(showsRushHour("live:openrouteservice", "DRIVE"));
-  assert.ok(showsRushHour("live:openrouteservice", "TWO_WHEELER"));
+  assert.equal(showsRushHour("live:openrouteservice", "TWO_WHEELER"), false); // ORS has no motorcycle mode
   assert.ok(showsRushHour("precomputed:openrouteservice:2026-10-07", "DRIVE"));
   assert.equal(showsRushHour("live:openrouteservice", "WALK"), false); // walking isn't slowed by traffic
   assert.equal(showsRushHour("live:google-routes", "DRIVE"), false); // already traffic-aware

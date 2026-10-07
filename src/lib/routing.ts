@@ -23,12 +23,12 @@ export const googleProvider: MatrixProvider = {
 // ---------- OpenRouteService (OSM) ----------
 
 /**
- * ORS has no motorcycle profile; TWO_WHEELER maps to driving-car as an
- * approximation (understates motorcycle speed in traffic). No transit.
+ * ORS has no motorcycle or transit profile, so it supports DRIVE and WALK
+ * only. (TWO_WHEELER used to map to driving-car, which showed car times under
+ * a "Motorcycle" label; removed 2026-10-07. Google Routes has a real one.)
  */
 const ORS_PROFILE: Partial<Record<TravelMode, string>> = {
   DRIVE: "driving-car",
-  TWO_WHEELER: "driving-car",
   WALK: "foot-walking",
 };
 
@@ -60,7 +60,7 @@ const ORS_BASE = process.env.ORS_BASE_URL || "https://api.heigit.org/openroutese
 
 export const orsProvider: MatrixProvider = {
   name: "openrouteservice",
-  supports: ["DRIVE", "WALK", "TWO_WHEELER"],
+  supports: ["DRIVE", "WALK"],
   async minutes(origins, destinations, mode) {
     const key = process.env.ORS_API_KEY;
     if (!key) throw new Error("ORS_API_KEY not set");
@@ -97,7 +97,7 @@ export const orsProvider: MatrixProvider = {
  * the default.
  */
 const EST_DETOUR = 1.35;
-const EST_KMH: Partial<Record<TravelMode, number>> = { DRIVE: 20, TWO_WHEELER: 25, WALK: 4.5 };
+const EST_KMH: Partial<Record<TravelMode, number>> = { DRIVE: 20, WALK: 4.5 };
 
 export function estimateMatrix(origins: LatLng[], destinations: LatLng[], mode: TravelMode): CostMatrix {
   const kmh = EST_KMH[mode];
@@ -107,7 +107,7 @@ export function estimateMatrix(origins: LatLng[], destinations: LatLng[], mode: 
 
 export const estimateProvider: MatrixProvider = {
   name: "straight-line-estimate",
-  supports: ["DRIVE", "WALK", "TWO_WHEELER"],
+  supports: ["DRIVE", "WALK"],
   minutes: async (o, d, m) => estimateMatrix(o, d, m),
 };
 

@@ -5,7 +5,9 @@ import { rushHourRange, showsRushHour } from "@/lib/traffic";
 
 /** Shared by the single-device planner and the group page. */
 
-export type Mode = "DRIVE" | "TWO_WHEELER" | "WALK";
+// No motorcycle: openrouteservice has no motorcycle profile, and showing car
+// times under a "Motorcycle" label was wrong (motorcycles get through traffic).
+export type Mode = "DRIVE" | "WALK";
 export type Result = {
   venueId: string;
   name: string;
@@ -19,7 +21,6 @@ export type Result = {
 
 const MODES: { value: Mode; label: string }[] = [
   { value: "DRIVE", label: "Car or ride-hail" },
-  { value: "TWO_WHEELER", label: "Motorcycle" },
   { value: "WALK", label: "Walking" },
 ];
 
