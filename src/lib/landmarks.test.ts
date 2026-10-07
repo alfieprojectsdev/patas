@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { indexLandmarks, normalize, searchLandmarks, type Landmark } from "./landmarks.ts";
-import { estimateMatrix } from "./routing.ts";
+import { estimateMatrix, orsProvider } from "./routing.ts";
 
 const L = (name: string, kind: Landmark["kind"], aka?: string[]): Landmark => ({ name, kind, area: "Quezon City", cell: "89694ec74dbffff", aka });
 const idx = indexLandmarks([
@@ -37,4 +37,9 @@ test("estimate: straight line × detour at a flat speed; no transit", () => {
   const walk = estimateMatrix([a], [b], "WALK")[0][0]!;
   assert.ok(Math.abs(walk - (10.76 * 1.35 * 60) / 4.5) < 1);
   assert.throws(() => estimateMatrix([a], [b], "TRANSIT"));
+  assert.throws(() => estimateMatrix([a], [b], "TWO_WHEELER"));
+});
+
+test("openrouteservice offers car and walking only, never car times labelled as motorcycle", () => {
+  assert.deepEqual(orsProvider.supports, ["DRIVE", "WALK"]);
 });

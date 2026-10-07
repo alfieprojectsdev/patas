@@ -14,7 +14,7 @@ export const RUSH_HOUR_FACTOR = { low: 1.5, high: 2 } as const;
 /** Only clear-road driving estimates get a range: not walking, not traffic-aware or fake times. */
 export function showsRushHour(source: string, mode: string): boolean {
   const clearRoad = source === "live:openrouteservice" || source.startsWith("precomputed:openrouteservice:");
-  return clearRoad && (mode === "DRIVE" || mode === "TWO_WHEELER");
+  return clearRoad && mode === "DRIVE";
 }
 
 export function rushHourRange(minutes: number): [number, number] {
