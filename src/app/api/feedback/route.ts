@@ -18,9 +18,10 @@ export async function POST(req: Request) {
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const got = await dbFor(req, LIMITS.feedback);
   if ("res" in got) {
+    // dbFor's messages are written for group links; say what happened to the message instead.
     return got.res.status === 429
       ? NextResponse.json({ error: "Thanks! Please try again in an hour." }, { status: 429 })
-      : got.res;
+      : NextResponse.json({ error: "Feedback can't be sent right now. Please try again later." }, { status: 503 });
   }
   await saveFeedback(got.db, parsed.value, req.headers.get("user-agent"));
   await notifyFeedback(parsed.value);
