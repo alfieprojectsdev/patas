@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Patas: the fair cell. A hexagon (an H3 cell) with everyone meeting in the middle. -->
+  <rect width="512" height="512" rx="112" fill="#1f6f50"/>
+  <polygon points="256,106 386,181 386,331 256,406 126,331 126,181" fill="none" stroke="#fbfaf7" stroke-width="28" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="34" fill="#fbfaf7"/>
+</svg>

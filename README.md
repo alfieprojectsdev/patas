@@ -4,7 +4,7 @@ Patas picks a meeting spot for a high school group project so that nobody gets s
 
 It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of QC students live in Caloocan, Marikina or San Mateo.
 
-Try it at **https://patas.ithinkandicode.space**. It's a test version for a small group of students.
+Try it at **https://patas.ithinkandicode.space**. It's a test version for a small group of students. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
 
 ![Fairest spots for four members, with each person's trip drawn to the top pick](docs/screenshots/2-fair-spots.png)
 
@@ -128,6 +128,7 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 | `npm run fetch:landmarks` | Rebuild `data/qc-landmarks.json` |
 | `npm run fetch:boundary` | Regenerate the Quezon City boundary polygon |
 | `npm run fetch:tiles` | Cut the Metro Manila basemap into `public/tiles/` |
+| `npm run icons` | Render the app icons in `public/icons/` from `icon.svg` |
 | `npm run screenshots` | Regenerate the images in this README against a production build (see the script header) |
 
 ## Status
