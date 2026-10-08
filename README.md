@@ -50,7 +50,7 @@ Every page has a **Feedback** link in the footer. It opens a short form: what ki
 
 ## Privacy
 
-Patas was built for high school students, who are minors, and they still use it. So the design keeps everyone's locations out of everything that persists or leaves the server. The same rules apply to every user, and Patas never asks anyone's age:
+Patas was built for high school students, who are minors, so the design keeps everyone's locations out of everything that persists or leaves the server. The same rules apply to every user, and Patas never asks anyone's age:
 
 - The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server. The map finder snaps the circle's position to a cell in the browser and sends only that cell id.
 - A group link looks like `/g/<id>#k=<key>`. The key is made in the organiser's browser and sits after the `#`, which browsers never send to a server, so it can't end up in logs. The app passes it in request bodies instead.
