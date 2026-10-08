@@ -1,10 +1,10 @@
 # Patas
 
-Patas picks a meeting spot for a high school group project so that nobody gets stuck with the long commute. *Patas* is Tagalog for "even" or "fair".
+Patas picks a meeting spot for a group so that nobody gets stuck with the long commute. It started with high school group projects, and works the same for college groups, orgs and teams. *Patas* is Tagalog for "even" or "fair".
 
-It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of QC students live in Caloocan, Marikina or San Mateo.
+It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of people who study or work in QC live in Caloocan, Marikina or San Mateo.
 
-Try it at **https://patas.ithinkandicode.space**. It's a test version for a small group of students. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
+Try it at **https://patas.ithinkandicode.space**. It's a test version. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
 
 ![Fairest spots for four members, with each person's trip drawn to the top pick](docs/screenshots/2-fair-spots.png)
 
@@ -12,17 +12,17 @@ Try it at **https://patas.ithinkandicode.space**. It's a test version for a smal
 
 Each member picks a public landmark near where they'll start: their school, an LRT/MRT station, a mall, a church or their barangay hall. Home addresses aren't an option, because the search only knows public places.
 
-When a place's OpenStreetMap name is hard to guess, **Can't find it? Look on the map** opens a map with a circle in the middle. Move the map until the circle is on your area and Patas lists up to five public landmarks within about 1.5 km, nearest first. The member still picks one of those. The spot on the map is never used as a starting point, so the map can't be used to enter a home.
+When a place's OpenStreetMap name is hard to guess, the **Map** button inside the landmark field (also offered as **Can't find it? Look on the map** under the suggestions) opens a map with a circle in the middle. Move the map until the circle is on your area and Patas lists up to five public landmarks within about 1.5 km, nearest first. The member still picks one of those. The spot on the map is never used as a starting point, so the map can't be used to enter a home.
 
-There are two ways to do this. One person can enter everyone's landmarks on a single phone, or they can create a group link and let each member add their own landmark on their own phone:
+The home page asks **Who's adding the landmarks?** With **Me, for everyone**, one person enters everyone's landmarks on a single phone. With **Each person, on their own phone**, the group uses a link:
 
-1. Someone presses **Create a group link** on the home page and sends the link to the group chat. The page also has a share button and a QR code for people in the same room.
+1. Someone picks that option, presses **Create a group link** and sends the link to the group chat. The page also has a share button and a QR code for people in the same room.
 2. Each member opens the link, picks a nickname and a landmark, and presses **Join**. They can change their landmark later from the same phone.
 3. Once at least two people have joined, anyone in the group can press **Find fair spots**.
 
 Nobody in the group sees anyone else's landmark, only the list of who has joined and the results.
 
-<img src="docs/screenshots/4-group-link.png" alt="A group page on a phone: the link to share, four members who have joined, and the Find fair spots button" width="320">
+<img src="docs/screenshots/4-group-link.png" alt="A group page on a phone after joining: who's in, a row to invite more people, and the Find fair spots button" width="320">
 
 <img src="docs/screenshots/1-pick-landmarks.png" alt="Landmark search: typing 'sm nor' suggests SM City North Edsa" width="560">
 
@@ -34,7 +34,9 @@ Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, comm
 
 Longest trips within 2 minutes of the best one count as a tie, because snapping each landmark to a ~200 m cell can shift a trip by about that much. Among those, the smaller gap wins, then the smaller total. The midpoint of everyone's locations is only used to start the search. It's rarely the fairest answer, because roads and traffic aren't symmetric.
 
-On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3geo.org) cell), never an exact point. The numbered pins are the ranked venues, and the dashed lines show who travels to the selected one. They're straight lines, not routes.
+On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3geo.org) cell), never an exact point, marked with their initial; names are in the legend. The numbered pins are the ranked venues. Pins that would overlap are pushed apart, with a short line to a dot at the real spot, and the selected one never moves. The dashed lines show who travels to the selected venue. They're straight lines, not routes.
+
+Only the selected result is open, with everyone's minutes. The others show a *trip strip*: everyone's minutes as dots on one shared scale, so a tighter strip means a fairer spot.
 
 <img src="docs/screenshots/3-phone-dark.png" alt="The same results on a phone in dark mode" width="320">
 
@@ -48,7 +50,7 @@ Every page has a **Feedback** link in the footer. It opens a short form: what ki
 
 ## Privacy
 
-The people using this are minors, so the design keeps their locations out of everything that persists or leaves the server:
+Patas was built for high school students, who are minors, and they still use it. So the design keeps everyone's locations out of everything that persists or leaves the server. The same rules apply to every user, and Patas never asks anyone's age:
 
 - The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server. The map finder snaps the circle's position to a cell in the browser and sends only that cell id.
 - A group link looks like `/g/<id>#k=<key>`. The key is made in the organiser's browser and sits after the `#`, which browsers never send to a server, so it can't end up in logs. The app passes it in request bodies instead.
@@ -64,7 +66,7 @@ The people using this are minors, so the design keeps their locations out of eve
 
 The map finder doesn't let anyone use a dropped pin as a starting point. That's deliberate, and it's worth keeping:
 
-- A free pin would invite members, who are minors, to mark their own homes. The server and openrouteservice would see the same kind of data as now (one ~200 m cell), but that cell would be a home block instead of a mall.
+- A free pin would invite members, some of them minors, to mark their own homes. The server and openrouteservice would see the same kind of data as now (one ~200 m cell), but that cell would be a home block instead of a mall.
 - The landmark list is what keeps homes out, because every starting point is a public place. The finder only exists for places whose OpenStreetMap name is hard to guess, like stylised or inconsistent spellings ("S&R" against "SNR").
 - The ~200 m blur is by design, and ranking is built around it: the 2-minute tie window is sized to the travel time that blur can add or remove. Results are approximate on purpose.
 - The finder says this in a warning box above the map, so members know the blur is intentional and don't try to place the circle precisely on their house.
@@ -150,7 +152,7 @@ This is an MVP. Still to come:
 
 - "we met here", so the next search favours whoever travelled most last time;
 - jeepney, UV and train times, and fares;
-- a curated list of venues that actually let students stay for hours;
+- a curated list of venues that actually let groups stay for hours;
 - an option to hide each member's travel times from the rest of the group.
 
 The working notes and ordered next steps are in [CLAUDE.md](CLAUDE.md).
@@ -158,3 +160,7 @@ The working notes and ordered next steps are in [CLAUDE.md](CLAUDE.md).
 ## Data
 
 Venue, landmark, boundary and map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the ODbL. Basemap tiles are built by [Protomaps](https://protomaps.com).
+
+## Licence
+
+The code is under the [MIT licence](LICENSE). The data above keeps its own terms: OpenStreetMap data stays under the ODbL, and travel times from openrouteservice are CC-BY-SA 4.0 and must keep their credit line.

@@ -13,3 +13,6 @@ public/tiles/
 .vercel
 .env*
 !.env.example
+
+# Claude Design export bundle (mockup runtime, duplicate screenshots). The notes and tokens are copied to docs/design/.
+docs/design/patas-redesign-handover/

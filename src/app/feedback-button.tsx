@@ -8,6 +8,7 @@ export default function FeedbackButton() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState("problem");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,6 +33,7 @@ export default function FeedbackButton() {
       if (!res.ok) return setStatus({ text: body.error ?? "Couldn't send. Please try again.", ok: false });
       trackEvent("feedback-sent", "Feedback sent");
       form.reset();
+      setKind("problem");
       setStatus({ text: "Thanks, it was sent. Every message gets read.", ok: true });
     } catch {
       setStatus({ text: "Couldn't reach Patas. Check your connection.", ok: false });
@@ -52,18 +54,24 @@ export default function FeedbackButton() {
       >
         Feedback
       </button>
-      <dialog ref={dialog} className="feedback" aria-labelledby="fb-title">
+      <dialog ref={dialog} className="feedback sheet" aria-labelledby="fb-title">
         <form onSubmit={submit}>
-          <h2 id="fb-title">Send feedback</h2>
-          <fieldset className="modes">
+          <div className="sheet-head">
+            <h2 id="fb-title">Send feedback</h2>
+            <button type="button" className="close" aria-label="Close" onClick={() => dialog.current?.close()}>
+              ×
+            </button>
+          </div>
+          <fieldset className="pills">
             <legend className="sr-only">Kind</legend>
             {[
               ["problem", "Something's wrong"],
               ["idea", "An idea"],
               ["other", "Other"],
-            ].map(([value, label], i) => (
-              <label key={value} className="mode">
-                <input type="radio" name="kind" value={value} defaultChecked={i === 0} /> {label}
+            ].map(([value, label]) => (
+              <label key={value} className={kind === value ? "on" : undefined}>
+                <input type="radio" name="kind" value={value} checked={kind === value} onChange={() => setKind(value)} />
+                {label}
               </label>
             ))}
           </fieldset>
@@ -84,11 +92,8 @@ export default function FeedbackButton() {
             </p>
           )}
           <div className="fb-actions">
-            <button type="submit" className="secondary" disabled={busy}>
+            <button type="submit" className="btn-accent" disabled={busy}>
               {busy ? "Sending…" : "Send"}
-            </button>
-            <button type="button" className="link" onClick={() => dialog.current?.close()}>
-              Close
             </button>
           </div>
         </form>

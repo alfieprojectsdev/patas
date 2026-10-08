@@ -9,6 +9,12 @@ function newGroupKey(): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+const STEPS = [
+  "Make a link and send it to your group chat.",
+  "Each person adds a nickname and a public landmark. Nobody sees anyone else's.",
+  "Once two people are in, anyone can press Find fair spots.",
+];
+
 export default function StartGroup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -34,19 +40,21 @@ export default function StartGroup() {
   }
 
   return (
-    <>
-      <section className="start-group" aria-labelledby="sg">
-        <h2 id="sg">Everyone on their own phone?</h2>
-        <p className="hint">
-          Make a group link and send it to your group chat. Each person adds their own landmark, and nobody sees anyone
-          else's.
-        </p>
-        <button type="button" className="secondary" disabled={busy} onClick={start}>
-          {busy ? "Making a link…" : "Create a group link"}
-        </button>
-        {error && <p className="error" role="alert">{error}</p>}
-      </section>
-      <p className="hint or">Or plan for everyone on this phone:</p>
-    </>
+    <section className="start-group" aria-label="Group link">
+      <ol className="steps">
+        {STEPS.map((s, i) => (
+          <li key={i}>
+            <span className="hex step" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ol>
+      <button type="button" className="btn-accent" disabled={busy} onClick={start}>
+        {busy ? "Making a link…" : "Create a group link"}
+      </button>
+      {error && <p className="error" role="alert">{error}</p>}
+    </section>
   );
 }

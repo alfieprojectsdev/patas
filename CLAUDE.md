@@ -97,6 +97,18 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   in localStorage, stored server-side as sha256 only. Pattern taken from
   washboard's `account-tokens.ts` / `use-hash-param.ts`.
 - `src/lib/meet.ts` — the ranking pipeline shared by `/api/meet` and group meet.
+- UI design: `docs/design/design-notes.md` (Claude Design handover v1) and
+  `docs/design/patas-tokens.css`; the live tokens are at the top of
+  `src/app/globals.css`. Display font Bricolage Grotesque via next/font
+  (self-hosted at build, never a runtime Google request), body system-ui.
+  Member colours and hexagon badges: `src/app/member-colors.tsx` (10 slots;
+  colour is never the only cue, every swatch carries an initial). Home:
+  `home.tsx` asks "Who's adding the landmarks?" then shows the planner
+  (`usePlanner` in `planner.tsx`) or the group-link explainer. Results are
+  their own screen (`ResultsScreen` in `results.tsx`) with an Edit bar.
+  Map pins that overlap are pushed out after fitBounds (`layoutPins` in
+  `map.tsx`); the selected pin never moves. Use an `on` class for checked
+  states, not `:has()` (an unsupported selector drops the whole rule).
 - Hosting: Vercel (`sin1`) + Neon Postgres (Singapore), deployed with the
   Vercel CLI from this machine because the map file is gitignored. Steps in
   `docs/deploy.md`. `supabase/migrations/` is just the folder name; there's no
