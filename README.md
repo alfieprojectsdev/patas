@@ -160,3 +160,7 @@ The working notes and ordered next steps are in [CLAUDE.md](CLAUDE.md).
 ## Data
 
 Venue, landmark, boundary and map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the ODbL. Basemap tiles are built by [Protomaps](https://protomaps.com).
+
+## Licence
+
+The code is under the [MIT licence](LICENSE). The data above keeps its own terms: OpenStreetMap data stays under the ODbL, and travel times from openrouteservice are CC-BY-SA 4.0 and must keep their credit line.
