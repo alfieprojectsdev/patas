@@ -197,12 +197,14 @@ export function PlannerForm({ p }: { p: PlannerState }) {
   );
 }
 
+const NO_VENUES: never[] = []; // stable, so the preview map doesn't redraw on every render
+
 /** Desktop only: the members' areas beside the form, from the first landmark. */
 export function PlannerPreview({ p }: { p: PlannerState }) {
   if (p.mapMembers.length === 0) return null;
   return (
     <>
-      <MeetMap members={p.mapMembers} venues={[]} selected={null} onSelect={p.select} />
+      <MeetMap members={p.mapMembers} venues={NO_VENUES} selected={null} onSelect={p.select} />
       <p className="hint">Each start is drawn as a ~200 m area, never an exact spot.</p>
     </>
   );

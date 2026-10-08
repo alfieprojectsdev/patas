@@ -217,24 +217,18 @@ export function ResultsList({
           const shortest = Math.min(...r.perMember.map((p) => p.minutes));
           const wifi = r.tags.some((t) => t.startsWith("wifi:") && t !== "wifi:no");
           return (
-            <li
-              key={r.venueId}
-              className={on ? "venue on" : "venue"}
-              role="button"
-              tabIndex={0}
-              aria-pressed={on}
-              onClick={() => onSelect(r.venueId)}
-              onKeyDown={(e) => {
-                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                  e.preventDefault();
-                  onSelect(r.venueId);
-                }
-              }}
-            >
+            // The venue name is a real button stretched over the whole card, so the card
+            // selects on a tap while its heading and the OpenStreetMap link stay
+            // separate for screen readers (children of role="button" are flattened).
+            <li key={r.venueId} className={on ? "venue on" : "venue"}>
               <div className="venue-top">
                 <span className="rank">{i + 1}</span>
                 <div className="venue-name">
-                  <h3>{venueName(r)}</h3>
+                  <h3>
+                    <button type="button" className="venue-btn" aria-pressed={on} onClick={() => onSelect(r.venueId)}>
+                      {venueName(r)}
+                    </button>
+                  </h3>
                   <div className="tags">
                     <span className="tag">{CATEGORY[r.tags[0]] ?? r.tags[0]}</span>
                     {wifi && <span className="tag">Wi-Fi listed</span>}
@@ -275,8 +269,6 @@ export function ResultsList({
                         href={`https://www.openstreetmap.org/?mlat=${r.location.lat}&mlon=${r.location.lng}#map=18/${r.location.lat}/${r.location.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
                       >
                         <span className="short">Open map ↗</span>
                         <span className="long">Open in OpenStreetMap ↗</span>
@@ -310,22 +302,29 @@ function TripStrip({
   pct: (m: number) => number;
   memberOf: (memberId: string) => ResultMember;
 }) {
-  let prev = -99;
-  let lvl = 0;
-  const dots = [...r.perMember]
-    .sort((a, b) => a.minutes - b.minutes)
-    .map((p) => {
+  // Dots that would sit on top of each other are nudged 16 px apart, away from
+  // the nearer end of the strip, so none spills past its edge.
+  const nudge = (list: typeof r.perMember, dir: 1 | -1) => {
+    let prev = -999;
+    let lvl = 0;
+    return list.map((p) => {
       const at = pct(p.minutes);
-      lvl = at - prev < 6 ? lvl + 1 : 0; // nudge dots that would sit on top of each other
+      lvl = Math.abs(at - prev) < 6 ? lvl + 1 : 0;
       prev = at;
-      return { p, at, lvl, m: memberOf(p.memberId) };
+      return { p, at, shift: dir * lvl * 16, m: memberOf(p.memberId) };
     });
+  };
+  const sorted = [...r.perMember].sort((a, b) => a.minutes - b.minutes);
+  const dots = [
+    ...nudge(sorted.filter((p) => pct(p.minutes) <= 50), 1),
+    ...nudge(sorted.filter((p) => pct(p.minutes) > 50).reverse(), -1),
+  ];
   return (
     <div className="strip" role="img" aria-label={r.perMember.map((p) => `${memberOf(p.memberId).name} ${p.minutes} min`).join(", ")}>
       <span className="axis" />
       <span className="band" style={{ left: `${pct(shortest)}%`, width: `${pct(r.worst) - pct(shortest)}%` }} />
-      {dots.map(({ p, at, lvl, m }) => (
-        <span key={p.memberId} className="dot" style={{ left: `calc(${at}% + ${lvl * 16}px)`, background: m.c.color, color: m.c.ink }}>
+      {dots.map(({ p, at, shift, m }) => (
+        <span key={p.memberId} className="dot" style={{ left: `calc(${at}% + ${shift}px)`, background: m.c.color, color: m.c.ink }}>
           {m.initial}
         </span>
       ))}
