@@ -1,6 +1,6 @@
 # Patas
 
-Patas picks a meeting spot for a high school group project so that nobody gets stuck with the long commute. *Patas* is Tagalog for "even" or "fair".
+Patas picks a meeting spot for a group so that nobody gets stuck with the long commute. It started with high school group projects, and works the same for college groups, orgs and teams. *Patas* is Tagalog for "even" or "fair".
 
 It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of QC students live in Caloocan, Marikina or San Mateo.
 
@@ -12,17 +12,17 @@ Try it at **https://patas.ithinkandicode.space**. It's a test version for a smal
 
 Each member picks a public landmark near where they'll start: their school, an LRT/MRT station, a mall, a church or their barangay hall. Home addresses aren't an option, because the search only knows public places.
 
-When a place's OpenStreetMap name is hard to guess, **Can't find it? Look on the map** opens a map with a circle in the middle. Move the map until the circle is on your area and Patas lists up to five public landmarks within about 1.5 km, nearest first. The member still picks one of those. The spot on the map is never used as a starting point, so the map can't be used to enter a home.
+When a place's OpenStreetMap name is hard to guess, the **Map** button inside the landmark field (also offered as **Can't find it? Look on the map** under the suggestions) opens a map with a circle in the middle. Move the map until the circle is on your area and Patas lists up to five public landmarks within about 1.5 km, nearest first. The member still picks one of those. The spot on the map is never used as a starting point, so the map can't be used to enter a home.
 
-There are two ways to do this. One person can enter everyone's landmarks on a single phone, or they can create a group link and let each member add their own landmark on their own phone:
+The home page asks **Who's adding the landmarks?** With **Me, for everyone**, one person enters everyone's landmarks on a single phone. With **Each person, on their own phone**, the group uses a link:
 
-1. Someone presses **Create a group link** on the home page and sends the link to the group chat. The page also has a share button and a QR code for people in the same room.
+1. Someone picks that option, presses **Create a group link** and sends the link to the group chat. The page also has a share button and a QR code for people in the same room.
 2. Each member opens the link, picks a nickname and a landmark, and presses **Join**. They can change their landmark later from the same phone.
 3. Once at least two people have joined, anyone in the group can press **Find fair spots**.
 
 Nobody in the group sees anyone else's landmark, only the list of who has joined and the results.
 
-<img src="docs/screenshots/4-group-link.png" alt="A group page on a phone: the link to share, four members who have joined, and the Find fair spots button" width="320">
+<img src="docs/screenshots/4-group-link.png" alt="A group page on a phone after joining: who's in, a row to invite more people, and the Find fair spots button" width="320">
 
 <img src="docs/screenshots/1-pick-landmarks.png" alt="Landmark search: typing 'sm nor' suggests SM City North Edsa" width="560">
 
@@ -34,7 +34,9 @@ Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, comm
 
 Longest trips within 2 minutes of the best one count as a tie, because snapping each landmark to a ~200 m cell can shift a trip by about that much. Among those, the smaller gap wins, then the smaller total. The midpoint of everyone's locations is only used to start the search. It's rarely the fairest answer, because roads and traffic aren't symmetric.
 
-On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3geo.org) cell), never an exact point. The numbered pins are the ranked venues, and the dashed lines show who travels to the selected one. They're straight lines, not routes.
+On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3geo.org) cell), never an exact point, marked with their initial; names are in the legend. The numbered pins are the ranked venues. Pins that would overlap are pushed apart, with a short line to a dot at the real spot, and the selected one never moves. The dashed lines show who travels to the selected venue. They're straight lines, not routes.
+
+Only the selected result is open, with everyone's minutes. The others show a *trip strip*: everyone's minutes as dots on one shared scale, so a tighter strip means a fairer spot.
 
 <img src="docs/screenshots/3-phone-dark.png" alt="The same results on a phone in dark mode" width="320">
 

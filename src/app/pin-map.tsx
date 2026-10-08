@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { cellPolygon, snapToCell } from "@/lib/h3";
-import { createBaseMap, textEl } from "./map";
+import { createBaseMap, cssVar, textEl } from "./map";
 import type { Landmark } from "./landmark-picker";
 
 /**
@@ -44,7 +44,7 @@ export default function PinMap({
       if (m.getZoom() < PIN_MIN_ZOOM) return cb.current.onCell(null);
       const c = m.getCenter();
       const cell = snapToCell({ lat: c.lat, lng: c.lng });
-      here.current = L.polygon(cellPolygon(cell), { color: "#1f6f50", weight: 2, fillOpacity: 0.2, interactive: false }).addTo(m);
+      here.current = L.polygon(cellPolygon(cell), { color: cssVar("--accent", "#1f6f50"), weight: 2, fillOpacity: 0.18, interactive: false }).addTo(m);
       cb.current.onCell(cell);
     };
     m.on("moveend", update);
@@ -65,9 +65,8 @@ export default function PinMap({
     const g = marks.current;
     if (!g) return;
     g.clearLayers();
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     landmarks.forEach((l) => {
-      L.polygon(l.hex, { color: dark ? "#c9cfc7" : "#3d3f3b", weight: 1.5, dashArray: "4 4", fillOpacity: 0.12 })
+      L.polygon(l.hex, { color: cssVar("--pin", "#2f322e"), weight: 1.5, dashArray: "4 3", fillOpacity: 0.1 })
         .bindTooltip(textEl(l.name), { direction: "top" })
         .on("click", () => cb.current.onPick(l))
         .addTo(g);

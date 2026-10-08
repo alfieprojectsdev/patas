@@ -56,8 +56,13 @@ export default function PinFinder({ onPick, onClose }: { onPick: (l: Landmark) =
   };
 
   return (
-    <dialog ref={dialog} className="pin-finder" aria-labelledby={`${id}-title`} onClose={onClose}>
-      <h2 id={`${id}-title`}>Find a landmark on the map</h2>
+    <dialog ref={dialog} className="pin-finder sheet" aria-labelledby={`${id}-title`} onClose={onClose}>
+      <div className="sheet-head">
+        <h2 id={`${id}-title`}>Find a landmark on the map</h2>
+        <button type="button" className="close" aria-label="Close" onClick={() => dialog.current?.close()}>
+          ×
+        </button>
+      </div>
       <div className="pin-warning" role="note">
         <strong>Don&apos;t put the circle on your home.</strong>
         <p>
@@ -67,8 +72,13 @@ export default function PinFinder({ onPick, onClose }: { onPick: (l: Landmark) =
       </div>
       <p className="hint">Move the map until the circle is near you, then pick a public place from the list.</p>
       <PinMap landmarks={results ?? []} onCell={setCell} onPick={pick} />
-      <div aria-live="polite">
+      <div aria-live="polite" className="nearby-count">
         {!cell && <p className="hint">Zoom in to see landmarks.</p>}
+        {cell && !failed && results && results.length > 0 && (
+          <p className="hint">
+            {results.length === 1 ? "1 public place" : `${results.length} public places`} within about 1.5 km, nearest first
+          </p>
+        )}
         {cell && failed && <p className="hint">Couldn&apos;t look up landmarks. Check your connection.</p>}
         {cell && !failed && results?.length === 0 && <p className="hint">No landmarks within about 1.5 km. Try a busier spot nearby.</p>}
       </div>
@@ -77,11 +87,16 @@ export default function PinFinder({ onPick, onClose }: { onPick: (l: Landmark) =
           {results.map((l) => (
             <li key={`${l.name}-${l.cell}`}>
               <button type="button" onClick={() => pick(l)}>
-                {l.name}
-                <small>
-                  {l.kind.replace("_", " ")} · {l.area}
-                  {away(l.metres)}
-                </small>
+                <span>
+                  {l.name}
+                  <small>
+                    {l.kind.replace("_", " ")} · {l.area}
+                    {away(l.metres)}
+                  </small>
+                </span>
+                <span className="pick" aria-hidden="true">
+                  Pick
+                </span>
               </button>
             </li>
           ))}

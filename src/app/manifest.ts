@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Patas: fair meeting spots",
     short_name: "Patas",
-    description: "Find a meeting spot for your group project where nobody gets stuck with the long commute.",
+    description: "Find a fair place to meet, so nobody gets stuck with the long commute.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -1,0 +1,87 @@
+/* Patas tokens v1. Drop-in for the top of src/app/globals.css.
+   Existing names and values are unchanged; lines marked NEW are additions. */
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f2f1ec;      /* NEW: bar tracks, segmented control, sunken areas */
+  --text: #1d1f1c;
+  --muted: #5f645c;
+  --line: #dcdcd4;
+  --line-strong: #b8b9ae;    /* NEW: input and secondary-button borders (3:1 on --surface) */
+  --accent: #1f6f50;
+  --accent-strong: #175a40;  /* NEW: hover / pressed */
+  --accent-text: #ffffff;
+  --accent-soft: #e2f0e9;
+  --accent-ink: #17573f;     /* NEW: text and links on --accent-soft */
+  --warn-bg: #fff3d6;
+  --warn-text: #6b4a00;
+  --warn-line: #d9a21b;      /* NEW: pin-finder warning border */
+  --error: #a3261b;
+  --pin: #2f322e;            /* NEW: unselected venue pins */
+  --pin-text: #ffffff;       /* NEW */
+  --qc-line: #1f6f50;        /* NEW: QC boundary (was hard-coded in map.tsx) */
+
+  /* Shape */
+  --radius-sm: 8px;          /* NEW: dropdown options */
+  --radius: 12px;            /* was 10px */
+  --radius-lg: 16px;         /* NEW: cards, dialogs, share box */
+  --radius-pill: 999px;      /* NEW: buttons, segmented controls, roster chips */
+  --tap: 44px;               /* NEW: minimum height of anything tappable */
+
+  /* Type. Display face is self-hosted through next/font (see note below). */
+  --font-display: var(--font-bricolage), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --step--2: 0.75rem;    /* 12  credits, tags */
+  --step--1: 0.875rem;   /* 14  hints, member rows */
+  --step-0: 1rem;        /* 16  body, inputs (keeps iOS from zooming) */
+  --step-1: 1.125rem;    /* 18  venue names, primary button (display) */
+  --step-2: 1.375rem;    /* 22  longest-trip figure (display 700) */
+  --step-3: 1.75rem;     /* 28  section headings on desktop (display 700) */
+  --step-4: 2.25rem;     /* 36  wordmark (display 800, the only 800) */
+
+  /* Spacing, 4px base */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-7: 32px; --space-8: 40px; --space-9: 56px;
+
+  /* Member colours, slots 1-10 (replace MEMBER_COLORS in results.tsx; no grey fallback needed) */
+  --member-1: #174fb0; --member-2: #e07a1f; --member-3: #b0306f; --member-4: #1f9e91; --member-5: #7a5a00;
+  --member-6: #7b5bd6; --member-7: #3d9be0; --member-8: #c43c2c; --member-9: #6f8a10; --member-10: #a07c08;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141614;
+    --surface: #1d201d;
+    --surface-2: #272b27;
+    --text: #ecede8;
+    --muted: #a3a89f;
+    --line: #353a34;
+    --line-strong: #4d544c;
+    --accent: #5fbf94;
+    --accent-strong: #7fd2ac;
+    --accent-text: #0d1a13;
+    --accent-soft: #1f3329;
+    --accent-ink: #9fe0c0;
+    --warn-bg: #3a2f12;
+    --warn-text: #f3d48a;
+    --warn-line: #b8860b;
+    --error: #ff8a7a;
+    --pin: #e6e8e2;
+    --pin-text: #141614;
+    --qc-line: #8fd3b4;
+
+    --member-1: #5a8ef0; --member-2: #f5a050; --member-3: #d9508f; --member-4: #46c9b9; --member-5: #a88520;
+    --member-6: #b49af5; --member-7: #9ad8fa; --member-8: #ff8a73; --member-9: #86a82a; --member-10: #f5dc7a;
+  }
+}
+
+/* Text colour inside a member swatch (pick per slot for contrast):
+   light: 1 #fff, 2 #141614, 3 #fff, 4 #141614, 5 #fff, 6 #fff, 7 #141614, 8 #fff, 9 #141614, 10 #141614
+   dark:  1 #141614, 2 #141614, 3 #141614, 4 #141614, 5 #141614, 6 #141614, 7 #141614, 8 #141614, 9 #141614, 10 #141614
+
+   Font: in layout.tsx
+     import { Bricolage_Grotesque } from "next/font/google";
+     const bricolage = Bricolage_Grotesque({ subsets: ["latin"], weight: ["700","800"], variable: "--font-bricolage", display: "swap" });
+     <html className={bricolage.variable}>
+   next/font downloads the file at build time and serves it from Patas, so visitors never contact Google.
+   Use it for h1-h3, venue names, the rank badge, minute figures and the primary button only. Body text stays system-ui. */

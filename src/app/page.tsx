@@ -1,5 +1,4 @@
-import Planner from "./planner";
-import StartGroup from "./start-group";
+import Home from "./home";
 import Footer from "./footer";
 
 // MVP UI. Done: single-device planner, and group links (src/app/g/) where
@@ -8,16 +7,10 @@ import Footer from "./footer";
 //  1. "We met here" → write meeting + burdens (minutes only) for rotation,
 //     then send priorBurden on the next search.
 //  2. Option to hide others' minutes now that members use their own devices.
-export default function Home() {
+export default function Page() {
   return (
-    <main>
-      <header>
-        <h1>Patas</h1>
-        <p className="lede">Find a meeting spot for your group project where nobody gets stuck with the long commute.</p>
-        <p className="hint">Quezon City only for now. Members can start up to 5 km outside QC.</p>
-      </header>
-      <StartGroup />
-      <Planner />
+    <main className="wide">
+      <Home />
       <Footer />
     </main>
   );

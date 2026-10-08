@@ -33,7 +33,7 @@ async function pickLandmark(page: Page, row: number, q: string, pick: string) {
 /** Fill the form; leave member 1's search open if `stopAtSearch`. */
 async function fillGroup(page: Page, stopAtSearch: boolean) {
   await page.goto(BASE);
-  for (let i = 2; i < GROUP.length; i++) await page.getByRole("button", { name: "Add member" }).click();
+  for (let i = 2; i < GROUP.length; i++) await page.getByRole("button", { name: "+ Add member" }).click();
   for (let i = 0; i < GROUP.length; i++) {
     await page.getByPlaceholder(`Member ${i + 1}`, { exact: true }).fill(GROUP[i].alias);
   }
@@ -106,6 +106,8 @@ await withPage(
 /** Create a group link in the UI, join as member 1 through the form, the rest via the API (their own "phones"). */
 async function groupWithMembers(page: Page) {
   await page.goto(BASE);
+  // The group link only appears once "Each person, on their own phone" is picked.
+  await page.getByRole("radio", { name: /Each person, on their own phone/ }).check();
   await page.getByRole("button", { name: "Create a group link" }).click();
   await page.waitForURL(/\/g\/[0-9a-f-]+#k=/);
   await page.getByPlaceholder("e.g. Bea").fill(GROUP[0].alias);
@@ -133,7 +135,7 @@ await withPage(
   { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: "light" },
   async (page) => {
     await groupWithMembers(page);
-    await shotBetween(page, ".share", ".primary", `${OUT}/4-group-link.png`, 8);
+    await shotBetween(page, ".status-row", ".primary + .hint", `${OUT}/4-group-link.png`, 8);
   },
 );
 
@@ -145,7 +147,7 @@ await withPage(
     await page.goto(BASE);
     await page.getByRole("button", { name: "Feedback" }).click();
     const dialog = page.locator("dialog.feedback");
-    await dialog.getByLabel("An idea").check();
+    await dialog.getByText("An idea").click(); // the radio itself is visually hidden inside its pill
     await dialog.locator("textarea").fill("Could it show jeepney routes too? Most of us commute.");
     await dialog.screenshot({ path: `${OUT}/5-feedback.png` });
     console.log(`wrote ${OUT}/5-feedback.png`);

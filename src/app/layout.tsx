@@ -1,9 +1,14 @@
 import "./globals.css";
+import { Bricolage_Grotesque } from "next/font/google";
 import RegisterServiceWorker from "./register-sw";
+
+// Display face for headings, venue names and numbers. next/font downloads it at
+// build time and serves it from Patas, so visitors never contact Google.
+const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-bricolage", display: "swap" });
 
 export const metadata = {
   title: "Patas",
-  description: "Fair meeting spots for group projects",
+  description: "Fair meeting spots for groups",
   // Installable: the manifest comes from src/app/manifest.ts; these cover iOS "Add to Home Screen".
   appleWebApp: { capable: true, title: "Patas", statusBarStyle: "default" as const },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
@@ -19,7 +24,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={display.variable}>
       <body>
         {children}
         <RegisterServiceWorker />
