@@ -9,16 +9,20 @@ export default function Privacy() {
   return (
     <main className="prose">
       <header>
-        <h1>
-          <a href="/" className="home">Patas</a>
-        </h1>
-        <p className="lede">Privacy notice</p>
-        <p className="hint">This is a test version of Patas, for a small group of students.</p>
+        <a href="/" className="brand">
+          <img src="/icons/icon.svg" width={28} height={28} alt="" />
+          <span className="wordmark">Patas</span>
+        </a>
+        <h1>Privacy notice</h1>
+        <p className="hint">
+          This is a test version of Patas. It was built for high school students, who are minors, so these rules are written
+          with them in mind and apply to everyone. Patas never asks your age.
+        </p>
       </header>
 
       <h2>What Patas asks for</h2>
       <p>
-        A nickname and a public landmark near where you'll start, like your school, a station or a mall. Patas doesn't
+        A nickname and a public landmark near where you'll start, like your school, campus or office, a station or a mall. Patas doesn't
         ask for your name, phone number, email or home address, and there are no accounts.
       </p>
 

@@ -2,9 +2,9 @@
 
 Patas picks a meeting spot for a group so that nobody gets stuck with the long commute. It started with high school group projects, and works the same for college groups, orgs and teams. *Patas* is Tagalog for "even" or "fair".
 
-It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of QC students live in Caloocan, Marikina or San Mateo.
+It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of people who study or work in QC live in Caloocan, Marikina or San Mateo.
 
-Try it at **https://patas.ithinkandicode.space**. It's a test version for a small group of students. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
+Try it at **https://patas.ithinkandicode.space**. It's a test version. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
 
 ![Fairest spots for four members, with each person's trip drawn to the top pick](docs/screenshots/2-fair-spots.png)
 
@@ -50,7 +50,7 @@ Every page has a **Feedback** link in the footer. It opens a short form: what ki
 
 ## Privacy
 
-The people using this are minors, so the design keeps their locations out of everything that persists or leaves the server:
+Patas was built for high school students, who are minors, and they still use it. So the design keeps everyone's locations out of everything that persists or leaves the server. The same rules apply to every user, and Patas never asks anyone's age:
 
 - The landmark list stores H3 cells, not coordinates, and the app sends only cell ids to the server. The map finder snaps the circle's position to a cell in the browser and sends only that cell id.
 - A group link looks like `/g/<id>#k=<key>`. The key is made in the organiser's browser and sits after the `#`, which browsers never send to a server, so it can't end up in logs. The app passes it in request bodies instead.
@@ -66,7 +66,7 @@ The people using this are minors, so the design keeps their locations out of eve
 
 The map finder doesn't let anyone use a dropped pin as a starting point. That's deliberate, and it's worth keeping:
 
-- A free pin would invite members, who are minors, to mark their own homes. The server and openrouteservice would see the same kind of data as now (one ~200 m cell), but that cell would be a home block instead of a mall.
+- A free pin would invite members, some of them minors, to mark their own homes. The server and openrouteservice would see the same kind of data as now (one ~200 m cell), but that cell would be a home block instead of a mall.
 - The landmark list is what keeps homes out, because every starting point is a public place. The finder only exists for places whose OpenStreetMap name is hard to guess, like stylised or inconsistent spellings ("S&R" against "SNR").
 - The ~200 m blur is by design, and ranking is built around it: the 2-minute tie window is sized to the travel time that blur can add or remove. Results are approximate on purpose.
 - The finder says this in a warning box above the map, so members know the blur is intentional and don't try to place the circle precisely on their house.
@@ -152,7 +152,7 @@ This is an MVP. Still to come:
 
 - "we met here", so the next search favours whoever travelled most last time;
 - jeepney, UV and train times, and fares;
-- a curated list of venues that actually let students stay for hours;
+- a curated list of venues that actually let groups stay for hours;
 - an option to hide each member's travel times from the rest of the group.
 
 The working notes and ordered next steps are in [CLAUDE.md](CLAUDE.md).
