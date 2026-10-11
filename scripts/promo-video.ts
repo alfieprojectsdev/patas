@@ -39,6 +39,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameS
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Browser, type Locator, type Page } from "playwright-core";
+import { cellCenter } from "../src/lib/h3.ts";
 
 // ---------- Config ----------
 
@@ -161,12 +162,15 @@ async function getBrowser() {
 
 /** The Next.js build id from the page's leading HTML comment, so a redeploy re-records. */
 async function siteBuildId(): Promise<string> {
+  let html: string;
   try {
-    const html = await (await fetch(BASE, { signal: AbortSignal.timeout(15_000) })).text();
-    return html.match(/<!--([A-Za-z0-9_-]{8,})-->/)?.[1] ?? "unknown";
+    const res = await fetch(BASE, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    html = await res.text();
   } catch (e) {
     throw new Error(`Can't reach ${BASE}: ${(e as Error).message}`);
   }
+  return html.match(/<!--([A-Za-z0-9_-]{8,})-->/)?.[1] ?? "unknown";
 }
 
 // ---------- Stage: cards (title cards, captions, background, mask) ----------
@@ -333,7 +337,10 @@ class Recorder {
       let prev = "";
       while (this.running) {
         const shot = await this.page.screenshot({ type: "jpeg", quality: 90, scale: "device", caret: "initial", timeout: 0 }).catch(() => null);
-        if (!shot) continue;
+        if (!shot) {
+          await new Promise((r) => setTimeout(r, 50)); // navigating or crashed: don't spin
+          continue;
+        }
         const t = this.now();
         const h = hash(shot);
         if (h === prev) continue;
@@ -453,12 +460,15 @@ async function pickOnMap({ page, rec, wait, bring }: Ctx, mapBtn: Locator, m: Me
   // The pin finder opens at [14.65, 121.05], zoom 13 (src/app/pin-map.tsx) and
   // lists landmarks from PIN_MIN_ZOOM = 14. Update these if that file changes.
   const START = { lat: 14.65, lng: 121.05 }, ZOOM = 14;
-  const hex: [number, number][] = await page.evaluate(async (m) => {
+  const cell: string = await page.evaluate(async (m) => {
     const res = await fetch("/api/landmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q: m.q }) });
+    if (!res.ok) throw new Error(`/api/landmarks answered ${res.status}`);
     const { results } = await res.json();
-    return (results.find((r: { name: string }) => r.name === m.pick) ?? results[0]).hex;
+    const hit = results.find((r: { name: string }) => r.name === m.pick) ?? results[0];
+    if (!hit) throw new Error(`No landmarks for "${m.q}"`);
+    return hit.cell;
   }, m);
-  const target = { lat: hex.reduce((a, p) => a + p[0], 0) / hex.length, lng: hex.reduce((a, p) => a + p[1], 0) / hex.length };
+  const target = cellCenter(cell);
 
   rec.mark("pin");
   await bring(mapBtn);
@@ -616,8 +626,11 @@ const FLOWS: Record<Flow, (c: Ctx) => Promise<void>> = {
           await page.evaluate(async (m) => {
             const k = new URLSearchParams(location.hash.slice(1)).get("k");
             const id = location.pathname.split("/")[2];
-            const post = (url: string, body: unknown) =>
-              fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+            const post = async (url: string, body: unknown) => {
+              const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+              if (!r.ok) throw new Error(`${url.replace(/\/groups\/[^/]+/, "/groups/<id>")} answered ${r.status}${r.status === 429 ? " (rate limited)" : ""}`);
+              return r.json();
+            };
             const { results } = await post("/api/landmarks", { q: m.q });
             const cell = results.find((r: { name: string }) => r.name === m.pick)?.cell;
             if (!cell) throw new Error(`No landmark "${m.pick}" for "${m.q}"`);
@@ -828,7 +841,12 @@ function compose(cut: string, cardsDir: string, demoDirs: Record<string, string>
 function publish(src: string, dest: string) {
   if (existsSync(dest) && hash(readFileSync(dest)) === hash(readFileSync(src))) return false;
   copyFileSync(src, `${dest}.tmp`);
-  renameSync(`${dest}.tmp`, dest);
+  try {
+    renameSync(`${dest}.tmp`, dest);
+  } catch (e) {
+    rmSync(`${dest}.tmp`, { force: true });
+    throw new Error(`Can't replace ${dest} (${(e as Error).message}). Close it in any video player and run again; the build is cached.`);
+  }
   return true;
 }
 
