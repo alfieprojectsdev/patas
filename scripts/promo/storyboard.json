@@ -1,0 +1,98 @@
+{
+  "$comment": "Everything you'd want to tweak lives here. Editing this file re-renders only the stages it affects (see scripts/promo-video.ts).",
+
+  "url": "https://patas.ithinkandicode.space",
+  "outputDir": "out/promo",
+
+  "cuts": {
+    "30s": ["hook", "planner", "cta"],
+    "60s": ["hook", "planner", "bridge", "group", "cta"]
+  },
+
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#141614" },
+
+  "phone": {
+    "viewport": { "width": 390, "height": 694 },
+    "deviceScaleFactor": 2.4,
+    "colorScheme": "dark",
+    "frame": { "x": 108, "y": 262, "width": 864, "radius": 44 }
+  },
+
+  "group": [
+    { "alias": "Bea", "q": "sm nor", "pick": "SM City North Edsa" },
+    { "alias": "Jun", "q": "lrt kat", "pick": "Katipunan station (LRT)" },
+    { "alias": "Kai", "q": "fairview terr", "pick": "Fairview Terraces" },
+    { "alias": "Mika", "q": "cubao", "pick": "Cubao station" }
+  ],
+  "mode": "Car or ride-hail",
+
+  "pacing": {
+    "typeDelayMs": 60,
+    "beforeStartMs": 700,
+    "afterPickMs": 220,
+    "mapHoldMs": 2500,
+    "listHoldMs": 2800,
+    "qrHoldMs": 1200,
+    "rosterStepMs": 600
+  },
+
+  "scenes": {
+    "hook": {
+      "type": "card",
+      "seconds": 2.8,
+      "title": "Where are we meeting?",
+      "subtitle": "Someone always gets the long commute.",
+      "motif": "meet"
+    },
+
+    "planner": {
+      "type": "demo",
+      "flow": "planner",
+      "captions": [
+        { "from": "start", "to": "find", "title": "Add where each friend starts", "sub": "Public landmarks only, never a home address" },
+        { "from": "find", "to": "results", "title": "Tap Find fair spots" },
+        { "from": "results", "to": "list", "title": "Nobody gets the long trip", "sub": "Spots ranked by the longest trip first" },
+        { "from": "list", "to": "end", "title": "Everyone's minutes, side by side" }
+      ]
+    },
+
+    "bridge": {
+      "type": "card",
+      "seconds": 2.6,
+      "title": "Planning over group chat?",
+      "subtitle": "Send a link. Each friend adds their own landmark.",
+      "motif": "link"
+    },
+
+    "group": {
+      "type": "demo",
+      "flow": "group",
+      "pickOnMap": true,
+      "captions": [
+        { "from": "start", "to": "share", "title": "Pick: each person, on their own phone" },
+        { "from": "share", "to": "join", "title": "Send the link to the group chat", "sub": "Or show the QR code if you're in the same room" },
+        { "from": "join", "to": "pin", "title": "Each friend joins from their own phone" },
+        { "from": "pin", "to": "roster", "title": "Can't find it by name? Use the map", "sub": "It lists public places near the circle, never the spot itself" },
+        { "from": "roster", "to": "find", "title": "Watch the group fill up", "sub": "Nobody sees anyone else's landmark" },
+        { "from": "find", "to": "results", "title": "Anyone can tap Find fair spots" },
+        { "from": "results", "to": "list", "title": "Your map shows only your own spot" },
+        { "from": "list", "to": "end", "title": "Same fair ranking for everyone" }
+      ]
+    },
+
+    "cta": {
+      "type": "cta",
+      "seconds": 4.2,
+      "name": "Patas",
+      "tagline": "Fair meeting spots for groups",
+      "url": "patas.ithinkandicode.space",
+      "footnote": "Free. No sign-up. Quezon City for now."
+    }
+  },
+
+  "music": {
+    "$comment": "Put a royalty-free track at this path to use it. If the file is missing, a quiet generated placeholder bed is used. Short tracks loop.",
+    "file": "scripts/promo/music.mp3",
+    "volume": 0.55
+  }
+}
