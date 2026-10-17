@@ -63,7 +63,7 @@ export default function Privacy() {
         </li>
         <li>The hosting company (Vercel) keeps standard request logs, such as page addresses and IP addresses, for a limited time.</li>
         <li>
-          Page views and a few anonymous actions (a search was run, a group was created, someone joined, a landmark was picked from the map) are counted with
+          Page views and a few anonymous actions (a search was run, a group was created, someone joined, a landmark was picked from the map, a usual spot was compared) are counted with
           GoatCounter, which uses no cookies. Like any website it loads from, it receives the page address (with group links
           shortened so it never sees which group), the previous page's address, your browser type, screen size and IP
           address. It never receives your nickname, landmark or results.

@@ -4,6 +4,8 @@ import { gridRingUnsafe } from "h3-js";
 import { cellCenter } from "./h3.ts";
 import { indexVenues, searchVenues } from "./venues.ts";
 import { meet, placeUsual } from "./meet.ts";
+import { loadVenueSnapshot } from "./candidates.ts";
+import { venueInScope } from "./scope.ts";
 import type { Landmark } from "./landmarks.ts";
 import type { Venue, VenueScore } from "./types";
 
@@ -44,8 +46,11 @@ test("meet always ranks the usual spot, even when it isn't in the top five", asy
       { memberId: "m2", cell: KATIPUNAN },
       { memberId: "m3", cell: CUBAO },
     ];
-    // A real snapshot venue far north of everyone, so it can't make the top five.
-    const usual = "osm:node/14073004991"; // Bulalohan sa Fairview
+    // The northernmost venue in the snapshot, far from everyone, so it can't make the top five.
+    // Picked at run time so a snapshot rebuild can't break the test.
+    const usual = loadVenueSnapshot()
+      .filter((v) => venueInScope(v.location))
+      .reduce((a, b) => (b.location.lat > a.location.lat ? b : a)).venueId;
     const { status, body } = await meet({ origins, mode: "WALK", usual });
     assert.equal(status, 200);
     const u = body.usual as { venueId: string; rank: number; of: number; worst: number; perMember: unknown[] };

@@ -30,8 +30,8 @@ async function pickLandmark(page: Page, row: number, q: string, pick: string) {
   await page.getByRole("option").filter({ hasText: pick }).first().click();
 }
 
-/** Fill the form; leave member 1's search open if `stopAtSearch`. */
-async function fillGroup(page: Page, stopAtSearch: boolean) {
+/** Fill the form; leave member 1's search open if `stopAtSearch`. Optionally name a usual spot. */
+async function fillGroup(page: Page, stopAtSearch: boolean, usual?: { q: string; pick: string }) {
   await page.goto(BASE);
   for (let i = 2; i < GROUP.length; i++) await page.getByRole("button", { name: "+ Add member" }).click();
   for (let i = 0; i < GROUP.length; i++) {
@@ -42,6 +42,10 @@ async function fillGroup(page: Page, stopAtSearch: boolean) {
   await page.getByRole("option").first().waitFor();
   if (stopAtSearch) return;
   await page.getByRole("option").filter({ hasText: GROUP[0].pick }).first().click();
+  if (usual) {
+    await page.getByRole("combobox", { name: "Your usual spot" }).fill(usual.q);
+    await page.getByRole("option").filter({ hasText: usual.pick }).first().click();
+  }
   await page.getByRole("button", { name: "Find fair spots" }).click();
   await page.locator(".venue").first().waitFor();
   await waitForMap(page);
@@ -100,6 +104,16 @@ await withPage(
     await fillGroup(page, false);
     await page.locator(".map").scrollIntoViewIfNeeded();
     await shotBetween(page, ".map", ".venue >> nth=0", `${OUT}/3-phone-dark.png`, 8);
+  },
+);
+
+await withPage(
+  browser,
+  { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: "light" },
+  async (page) => {
+    await fillGroup(page, false, { q: "jollibee cubao", pick: "Jollibee" });
+    await page.locator(".usual").waitFor();
+    await shotBetween(page, ".results-head", ".venue >> nth=0", `${OUT}/6-usual-spot.png`, 8);
   },
 );
 
