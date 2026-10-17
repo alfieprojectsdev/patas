@@ -9,6 +9,8 @@ const config: NextConfig = {
     "/api/meet": ["./data/qc-venues.json", "./data/tables/**/*"],
     "/api/groups/[groupId]/meet": ["./data/qc-venues.json", "./data/tables/**/*"],
     "/api/landmarks": ["./data/qc-landmarks.json"],
+    // Venue search tags each venue with its nearest landmark, so it needs both snapshots.
+    "/api/venues": ["./data/qc-venues.json", "./data/qc-landmarks.json"],
   },
 };
 
