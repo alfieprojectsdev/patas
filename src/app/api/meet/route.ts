@@ -10,7 +10,9 @@ export const maxDuration = 30; // routing call has a 20 s timeout
 
 /**
  * POST /api/meet
- * Body: { origins: [{memberId, cell} | {memberId, landmark:{lat,lng}}], mode?, priorBurden?, departureTime? }
+ * Body: { origins: [{memberId, cell} | {memberId, landmark:{lat,lng}}], mode?, priorBurden?, departureTime?, usual? }
+ * With `usual` (a venue id from /api/venues), the response adds `usual`: that
+ * venue's result plus its rank, even when it isn't in the top five.
  *
  * Single-device planner. Preferred: the client sends H3 res-9 `cell`s.
  * `landmark` is accepted for convenience but snapped immediately.
@@ -28,6 +30,7 @@ const Body = z.object({
   mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER"]).default("DRIVE"),
   priorBurden: z.array(z.number().nonnegative()).optional(),
   departureTime: z.string().datetime({ offset: true }).optional(),
+  usual: z.string().min(1).max(80).optional(), // a venue id from /api/venues
 });
 
 export async function POST(req: Request) {

@@ -99,14 +99,20 @@ export function pickCandidates(pool: Venue[], origins: Origin[], max: number, mi
 
 export type VenueSnapshot = { source: string; osmBase: string; fetchedAt: string; venues: Venue[] };
 
-let snapshotCache: Venue[] | null = null;
-function loadSnapshot(): Venue[] {
-  if (!snapshotCache) {
+let rawCache: Venue[] | null = null;
+/** Every venue in the snapshot, before de-duplication (venue search needs them all). */
+export function loadVenueSnapshot(): Venue[] {
+  if (!rawCache) {
     const f = join(process.cwd(), process.env.VENUES_SNAPSHOT ?? "data/qc-venues.json");
     if (!existsSync(f)) throw new Error("venue snapshot missing; run scripts/fetch-venues.ts");
-    const snap = JSON.parse(readFileSync(f, "utf8")) as VenueSnapshot;
-    snapshotCache = dedupeByCell(snap.venues);
+    rawCache = (JSON.parse(readFileSync(f, "utf8")) as VenueSnapshot).venues;
   }
+  return rawCache;
+}
+
+let snapshotCache: Venue[] | null = null;
+function loadSnapshot(): Venue[] {
+  if (!snapshotCache) snapshotCache = dedupeByCell(loadVenueSnapshot());
   return snapshotCache;
 }
 

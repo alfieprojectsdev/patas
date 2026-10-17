@@ -38,6 +38,8 @@ On the map, each member's starting point is a ~200 m hexagon (an [H3](https://h3
 
 Only the selected result is open, with everyone's minutes. The others show a *trip strip*: everyone's minutes as dots on one shared scale, so a tighter strip means a fairer spot.
 
+Groups are creatures of habit, so there's an optional **Your usual spot** field. Search for the place you always go to (each result names its nearest landmark, so "jollibee cubao" finds the right branch), and Patas ranks it alongside its own picks without changing the order: "Your usual spot, Jollibee, ranks 22nd of 25. Its longest trip is 27 min (Kai), 11 min more than the top pick." If the usual spot is already the fairest, it says so.
+
 <img src="docs/screenshots/3-phone-dark.png" alt="The same results on a phone in dark mode" width="320">
 
 The screenshots use real OpenRouteService driving times, which assume clear roads. Next to each driving time, Patas shows a rough rush-hour range of 1.5 to 2 times that figure. The range comes from the [TomTom Traffic Index](https://www.tomtom.com/traffic-index/) averages for Metro Manila (about 21 km/h overall, 19 km/h at rush hour, against the 26–37 km/h that OpenRouteService implies across QC). It's a city-wide average, not live traffic, so it sets expectations without changing the ranking. Patas is for planning a meeting ahead of time, not live navigation.

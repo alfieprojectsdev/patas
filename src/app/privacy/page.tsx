@@ -55,7 +55,7 @@ export default function Privacy() {
           Travel times come from openrouteservice (HeiGIT, Germany). It receives the centre of each ~200 m area, not your
           landmark or nickname.
         </li>
-        <li>Landmark search, the list of places and the map are served by Patas itself, so no other company sees what you type or which part of the map you look at.</li>
+        <li>Landmark search, usual-spot search, the list of places and the map are served by Patas itself, so no other company sees what you type or which part of the map you look at.</li>
         <li>
           If you look for a landmark on the map, your browser sends Patas the ~200 m area under the circle, never an exact
           point, to list public places nearby. It isn't stored. You still pick one of those places; the spot on the map is

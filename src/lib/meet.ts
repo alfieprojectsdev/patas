@@ -3,10 +3,11 @@ import { join } from "node:path";
 import { findCandidates } from "./candidates.ts";
 import { getProvider } from "./routing.ts";
 import { rankVenues } from "./scoring.ts";
-import { originInScope } from "./scope.ts";
+import { originInScope, venueInScope } from "./scope.ts";
+import { venueById } from "./venues.ts";
 import { cellCenter, isValidOriginCell } from "./h3.ts";
 import { bandFor, covers, lookup, type PrecomputedTable } from "./precomputed.ts";
-import type { CostMatrix, Origin, TravelMode, Venue } from "./types";
+import type { CostMatrix, Origin, TravelMode, Venue, VenueScore } from "./types";
 
 /**
  * The ranking pipeline behind /api/meet and /api/groups/[id]/meet.
@@ -26,6 +27,8 @@ export type MeetInput = {
   mode: TravelMode;
   priorBurden?: number[];
   departureTime?: string;
+  /** "Our usual spot": a venue id from the snapshot, always ranked alongside the picks. */
+  usual?: string;
 };
 export type MeetOutcome = { status: number; body: Record<string, unknown> };
 
@@ -41,7 +44,16 @@ function loadTable(mode: string, band: string): PrecomputedTable | null {
   return tableCache.get(key)!;
 }
 
-export async function meet({ origins: input, mode, priorBurden, departureTime }: MeetInput): Promise<MeetOutcome> {
+/**
+ * Pure: where the usual spot landed in the full ranking. Unreachable venues
+ * are dropped by rankVenues, so a missing usual spot means someone can't get there.
+ */
+export function placeUsual(ranked: VenueScore[], usualId: string): { index: number; of: number } | null {
+  const index = ranked.findIndex((s) => s.venue.venueId === usualId);
+  return index < 0 ? null : { index, of: ranked.length };
+}
+
+export async function meet({ origins: input, mode, priorBurden, departureTime, usual }: MeetInput): Promise<MeetOutcome> {
   const cells = input.map((o) => o.cell);
   if (!cells.every((c) => isValidOriginCell(c))) return { status: 400, body: { error: "invalid cell" } };
   const origins: Origin[] = input.map((o, i) => ({ memberId: o.memberId, landmark: cellCenter(cells[i]) }));
@@ -51,10 +63,17 @@ export async function meet({ origins: input, mode, priorBurden, departureTime }:
     return { status: 422, body: { error: "Patas currently covers Quezon City only" } };
   }
 
+  const usualVenue = usual ? venueById(usual) : undefined;
+  if (usual && (!usualVenue || !venueInScope(usualVenue.location))) {
+    return { status: 400, body: { error: "That usual spot isn't in Patas's venue list." } };
+  }
+
   const depart = departureTime ? new Date(departureTime) : new Date();
   // Tables cover cells inside QC only; a buffer-zone member forces live routing.
   const loaded = loadTable(mode, bandFor(depart));
-  const table = loaded && covers(loaded, cells) ? loaded : null;
+  // A usual spot the table doesn't cover forces live routing too.
+  const table =
+    loaded && covers(loaded, cells) && (!usualVenue || loaded.venues.some((v) => v.venueId === usualVenue.venueId)) ? loaded : null;
 
   let venues: Venue[];
   let matrix: CostMatrix;
@@ -71,6 +90,7 @@ export async function meet({ origins: input, mode, priorBurden, departureTime }:
         return { status: 400, body: { error: `mode ${mode} not supported by ${provider.name}` } };
       }
       venues = await findCandidates(origins);
+      if (usualVenue && !venues.some((v) => v.venueId === usualVenue.venueId)) venues.push(usualVenue);
       matrix = await provider.minutes(origins.map((o) => o.landmark), venues.map((v) => v.location), mode, departureTime ? depart : undefined);
       source = `live:${provider.name}`;
     }
@@ -79,8 +99,8 @@ export async function meet({ origins: input, mode, priorBurden, departureTime }:
     return { status: 502, body: { error: "upstream failure" } };
   }
 
-  const ranked = rankVenues(venues, matrix, { priorBurden }).slice(0, 5);
-  const results = ranked.map((s) => ({
+  const ranked = rankVenues(venues, matrix, { priorBurden });
+  const toResult = (s: VenueScore) => ({
     venueId: s.venue.venueId,
     name: s.venue.name,
     location: s.venue.tags.includes("host") ? null : s.venue.location, // never expose a member's cell
@@ -89,6 +109,13 @@ export async function meet({ origins: input, mode, priorBurden, departureTime }:
     spread: Math.round(s.spread),
     total: Math.round(s.total),
     perMember: origins.map((o, i) => ({ memberId: o.memberId, minutes: Math.round(s.perMember[i]) })),
-  }));
-  return { status: 200, body: { results, source } };
+  });
+  const results = ranked.slice(0, 5).map(toResult);
+  if (!usualVenue) return { status: 200, body: { results, source } };
+
+  const place = placeUsual(ranked, usualVenue.venueId);
+  const usualResult = place
+    ? { ...toResult(ranked[place.index]), rank: place.index + 1, of: place.of }
+    : { venueId: usualVenue.venueId, name: usualVenue.name, unreachable: true };
+  return { status: 200, body: { results, source, usual: usualResult } };
 }

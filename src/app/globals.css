@@ -301,6 +301,12 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .caveat .credit { font-size: 0.75rem; }
 .caveat .warn { padding: 8px 12px; border-radius: var(--radius); background: var(--warn-bg); color: var(--warn-text); font-size: 0.875rem; }
 
+.usual {
+  display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px;
+  border: 1.5px dashed var(--line-strong); border-radius: 14px; background: var(--surface); font-size: 0.9375rem; line-height: 1.45;
+}
+.usual p { margin: 0; }
+h2 .optional { font-family: var(--font-body); font-size: 0.875rem; font-weight: 400; color: var(--muted); }
 .venues { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
 .venue {
   display: grid; gap: 10px; padding: 12px 14px; cursor: pointer;

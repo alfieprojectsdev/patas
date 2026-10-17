@@ -25,6 +25,9 @@ export type Result = {
   total: number;
   perMember: { memberId: string; minutes: number }[];
 };
+/** "Our usual spot" as /api/meet returns it: its result and rank, or a note that someone can't reach it. */
+export type UsualResult = (Result & { rank: number; of: number }) | { venueId: string; name: string; unreachable: true };
+
 /** How a member is shown in results: name, colour and the label inside their hexagon. */
 export type ResultMember = { name: string; c: MemberColor; initial: string };
 
@@ -34,7 +37,7 @@ export const MODES: { value: Mode; label: string }[] = [
 ];
 export const modeLabel = (m: Mode) => MODES.find((o) => o.value === m)!.label;
 
-const CATEGORY: Record<string, string> = {
+export const CATEGORY: Record<string, string> = {
   library: "Library",
   community_centre: "Community centre",
   coworking: "Co-working space",
@@ -177,6 +180,7 @@ export function ResultsList({
   onSelect,
   venueName,
   memberOf,
+  usual,
 }: {
   results: Result[];
   source: string;
@@ -186,12 +190,14 @@ export function ResultsList({
   onSelect: (venueId: string) => void;
   venueName: (r: Result) => string;
   memberOf: (memberId: string) => ResultMember;
+  usual?: UsualResult | null;
 }) {
   const [how, setHow] = useState(false);
   const rush = showsRushHour(source, mode);
   const range = (m: number) => rushHourRange(m).join("–");
   // One scale for every card, so a tighter strip means a fairer spot.
-  const longest = Math.max(0, ...results.flatMap((r) => r.perMember.map((p) => p.minutes)));
+  const usualRanked = usual && !("unreachable" in usual) ? usual : null;
+  const longest = Math.max(0, ...[...results, ...(usualRanked ? [usualRanked] : [])].flatMap((r) => r.perMember.map((p) => p.minutes)));
   const scale = Math.max(20, Math.ceil(longest / 10) * 10);
   const pct = (m: number) => (m / scale) * 100;
 
@@ -211,6 +217,7 @@ export function ResultsList({
       )}
       {source && <Caveat source={source} rush={rush} />}
       {results.length === 0 && <p>No venue was reachable for everyone. Try a different travel mode.</p>}
+      {usual && results[0] && <UsualCompare usual={usual} best={results[0]} pct={pct} memberOf={memberOf} />}
       <ol className="venues">
         {results.map((r, i) => {
           const on = r.venueId === selected;
@@ -232,6 +239,7 @@ export function ResultsList({
                   <div className="tags">
                     <span className="tag">{CATEGORY[r.tags[0]] ?? r.tags[0]}</span>
                     {wifi && <span className="tag">Wi-Fi listed</span>}
+                    {usualRanked?.venueId === r.venueId && <span className="tag you">Your usual spot</span>}
                   </div>
                 </div>
                 <div className="worst">
@@ -287,6 +295,71 @@ export function ResultsList({
         })}
       </ol>
     </section>
+  );
+}
+
+const ordinal = (n: number) => {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${suffix}`;
+};
+const listNames = (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
+
+/**
+ * How the group's usual spot compares with Patas's top pick. The ranking is
+ * untouched: the habit is measured against it, not folded into it.
+ */
+function UsualCompare({
+  usual,
+  best,
+  pct,
+  memberOf,
+}: {
+  usual: UsualResult;
+  best: Result;
+  pct: (m: number) => number;
+  memberOf: (memberId: string) => ResultMember;
+}) {
+  if ("unreachable" in usual) {
+    return (
+      <div className="usual" role="note">
+        <p>
+          <b>Your usual spot, {usual.name},</b> can't be reached by everyone with this travel mode.
+        </p>
+      </div>
+    );
+  }
+  const longestBy = listNames(usual.perMember.filter((p) => p.minutes === usual.worst).map((p) => memberOf(p.memberId).name));
+  const diff = usual.worst - best.worst;
+  const shortest = Math.min(...usual.perMember.map((p) => p.minutes));
+  const uneven = `the trips are less even (gap ${usual.spread} min against ${best.spread})`;
+  return (
+    <div className="usual" role="note">
+      {usual.rank === 1 ? (
+        <p>
+          <b>Your usual spot, {usual.name}, is already the fairest</b> of the {usual.of} places Patas checked.
+        </p>
+      ) : (
+        <p>
+          <b>
+            Your usual spot, {usual.name}, ranks {ordinal(usual.rank)} of {usual.of}.
+          </b>{" "}
+          Its longest trip is {usual.worst} min ({longestBy}),{" "}
+          {diff > 0
+            ? `${diff} min more than the top pick.`
+            : diff === 0
+              ? `the same as the top pick, but ${uneven}.`
+              : `${-diff} min less than the top pick, but ${uneven}.`}
+          {usual.rank <= 5 && " It's in the list below."}
+        </p>
+      )}
+      {usual.rank > 5 && (
+        <div className="strip-row">
+          <TripStrip r={usual} shortest={shortest} pct={pct} memberOf={memberOf} />
+          <span className="gap">gap {usual.spread} min</span>
+        </div>
+      )}
+    </div>
   );
 }
 
