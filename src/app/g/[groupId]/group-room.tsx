@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LandmarkPicker, { type Landmark } from "../../landmark-picker";
-import { ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember } from "../../results";
+import { ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember, type UsualResult } from "../../results";
+import { UsualSpotSection, type UsualSpot } from "../../usual-spot-picker";
 import { initialOf, MemberHex, useMemberColors } from "../../member-colors";
 import { useHashParam } from "../../use-hash-param";
 import { trackEvent } from "../../analytics";
@@ -70,6 +71,8 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
   const [results, setResults] = useState<Result[] | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [source, setSource] = useState("");
+  const [usualSpot, setUsualSpot] = useState<UsualSpot | null>(null);
+  const [usual, setUsual] = useState<UsualResult | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -133,7 +136,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
     setError("");
     setResults(null);
     try {
-      const { res, data } = await post(`/api/groups/${groupId}/meet`, { k, mode });
+      const { res, data } = await post(`/api/groups/${groupId}/meet`, { k, mode, usual: usualSpot?.venueId });
       if (!res.ok) {
         setError(res.status === 502 ? "Couldn't get travel times right now. Try again in a minute." : data.error ?? "Something went wrong.");
         return;
@@ -142,6 +145,8 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
       trackEvent(`group-search-${mode.toLowerCase()}`, `Search, group link (${mode})`);
       setSelected(data.results[0]?.venueId ?? null);
       setSource(data.source);
+      setUsual(data.usual ?? null);
+      if (data.usual) trackEvent("usual-spot-compared", "Usual spot compared");
       setShowResults(true);
       window.scrollTo(0, 0);
     } catch {
@@ -208,6 +213,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
           onSelect={select}
           venueName={venueName}
           memberOf={memberOf}
+          usual={usual}
         />
       </ResultsScreen>
     );
@@ -283,6 +289,14 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
         mode={mode}
         onChange={(m) => {
           setMode(m);
+          setResults(null);
+        }}
+      />
+
+      <UsualSpotSection
+        value={usualSpot}
+        onChange={(v) => {
+          setUsualSpot(v);
           setResults(null);
         }}
       />

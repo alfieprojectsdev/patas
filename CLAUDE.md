@@ -97,6 +97,12 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   in localStorage, stored server-side as sha256 only. Pattern taken from
   washboard's `account-tokens.ts` / `use-hash-param.ts`.
 - `src/lib/meet.ts` — the ranking pipeline shared by `/api/meet` and group meet.
+  Optional `usual` (a venue id): "our usual spot" is added to the candidates
+  and returned as `usual` with its rank among everything reachable, even
+  outside the top five. It never changes the ranking; the UI compares it with
+  the top pick. Venue search: `src/lib/venues.ts` + `POST /api/venues` over
+  the raw venue snapshot, each venue tagged with its nearest landmark so
+  same-named branches can be told apart ("jollibee cubao").
 - UI design: `docs/design/design-notes.md` (Claude Design handover v1) and
   `docs/design/patas-tokens.css`; the live tokens are at the top of
   `src/app/globals.css`. Display font Bricolage Grotesque via next/font

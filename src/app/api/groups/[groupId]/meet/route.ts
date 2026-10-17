@@ -9,13 +9,14 @@ export const runtime = "nodejs";
 export const maxDuration = 30; // routing call has a 20 s timeout
 
 /**
- * POST /api/groups/<id>/meet  { k, mode? } → same shape as /api/meet, with
+ * POST /api/groups/<id>/meet  { k, mode?, usual? } → same shape as /api/meet, with
  * nicknames as memberIds. Cells are unsealed in memory for this request only
  * and never returned.
  */
 const Body = z.object({
   k: GroupKeyZ,
   mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER"]).default("DRIVE"),
+  usual: z.string().min(1).max(80).optional(),
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ groupId: string }> }) {
@@ -32,6 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ groupId
   const { status, body } = await meet({
     origins: r.origins.map((o) => ({ memberId: o.alias, cell: o.cell })),
     mode: parsed.data.mode,
+    usual: parsed.data.usual,
   });
   return NextResponse.json(body, { status });
 }
