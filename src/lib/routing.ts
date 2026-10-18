@@ -58,33 +58,74 @@ export function parseOrsMatrix(json: { durations?: (number | null)[][] }, n: num
 export const ORS_ATTRIBUTION = "© openrouteservice by HeiGIT | Data from OpenStreetMap";
 const ORS_BASE = process.env.ORS_BASE_URL || "https://api.heigit.org/openrouteservice";
 
+/**
+ * Walking fallback. On 2026-10-18 ORS's foot-walking profile hung on every
+ * request, in every city, for most of a day, while every other profile on the
+ * same key answered in 0.6 s. foot-hiking walks at the same 5 km/h on the same
+ * footpaths; it prefers trails, which Metro Manila barely has. So: try
+ * foot-walking for `tryMs`; on a timeout, network error or 5xx, use
+ * foot-hiking and skip foot-walking for `downMs`. The matrix carries the note
+ * "walk:foot-hiking" (see `noteOf`) so the results can say so.
+ */
+export const ORS_WALK = { profile: "foot-walking", fallback: "foot-hiking", tryMs: 10_000, downMs: 10 * 60_000 };
+let walkDownUntil = 0;
+export const resetWalkFallbackForTest = () => (walkDownUntil = 0);
+
+const notes = new WeakMap<CostMatrix, string>();
+/** A note a provider attached to a matrix, e.g. "walk:foot-hiking". */
+export const noteOf = (m: CostMatrix) => notes.get(m);
+export function withNote(m: CostMatrix, note: string | undefined): CostMatrix {
+  if (note) notes.set(m, note);
+  return m;
+}
+
+/** Worth trying another profile: the service didn't answer, not "your request is wrong". */
+const unanswered = (e: unknown) => {
+  const err = e as Error;
+  return err?.name === "TimeoutError" || err?.name === "AbortError" || (err?.name === "TypeError" && /fetch failed/i.test(err.message)) || /^ORS 5\d\d$/.test(err?.message ?? "");
+};
+
+async function orsMatrix(profile: string, origins: LatLng[], destinations: LatLng[], timeoutMs: number): Promise<CostMatrix> {
+  const key = process.env.ORS_API_KEY;
+  if (!key) throw new Error("ORS_API_KEY not set");
+  const locations = [...origins, ...destinations].map((p) => [p.lng, p.lat]);
+  const n = origins.length;
+  const m = destinations.length;
+
+  const res = await fetch(`${ORS_BASE}/v2/matrix/${profile}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: key },
+    body: JSON.stringify({
+      locations,
+      sources: [...Array(n).keys()],
+      destinations: [...Array(m).keys()].map((j) => n + j),
+      metrics: ["duration"],
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`ORS ${res.status}`); // no body echo
+  return parseOrsMatrix(await res.json(), n, m);
+}
+
 export const orsProvider: MatrixProvider = {
   name: "openrouteservice",
   supports: ["DRIVE", "WALK"],
   async minutes(origins, destinations, mode) {
-    const key = process.env.ORS_API_KEY;
-    if (!key) throw new Error("ORS_API_KEY not set");
     const profile = ORS_PROFILE[mode];
     if (!profile) throw new Error(`ORS does not support mode ${mode}`);
-
-    const locations = [...origins, ...destinations].map((p) => [p.lng, p.lat]);
-    const n = origins.length;
-    const m = destinations.length;
-
-    const res = await fetch(`${ORS_BASE}/v2/matrix/${profile}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: key },
-      body: JSON.stringify({
-        locations,
-        sources: [...Array(n).keys()],
-        destinations: [...Array(m).keys()].map((j) => n + j),
-        metrics: ["duration"],
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) throw new Error(`ORS ${res.status}`); // no body echo
-    return parseOrsMatrix(await res.json(), n, m);
+    if (mode !== "WALK") return orsMatrix(profile, origins, destinations, 20_000);
+    if (Date.now() >= walkDownUntil) {
+      try {
+        return await orsMatrix(ORS_WALK.profile, origins, destinations, ORS_WALK.tryMs);
+      } catch (e) {
+        if (!unanswered(e)) throw e;
+        walkDownUntil = Date.now() + ORS_WALK.downMs;
+        const why = (e as Error).name === "TimeoutError" ? "timeout" : (e as Error).message;
+        console.error(`openrouteservice ${ORS_WALK.profile} failed (${why}); using ${ORS_WALK.fallback} for ${ORS_WALK.downMs / 60_000} min`);
+      }
+    }
+    return withNote(await orsMatrix(ORS_WALK.fallback, origins, destinations, 15_000), `walk:${ORS_WALK.fallback}`);
   },
 };
 
