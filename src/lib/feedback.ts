@@ -1,4 +1,5 @@
 import type { Db } from "./db.ts";
+import { postWebhook } from "./webhook.ts";
 
 /**
  * The Feedback button, adapted from carpool-app's lib/feedback.js.
@@ -54,12 +55,7 @@ export async function notifyFeedback(f: Feedback): Promise<void> {
   if (!url) return;
   const lines = [`**Patas feedback** (${f.kind}${f.page ? `, ${f.page}` : ""})`, f.message, f.contact ? `Contact: ${f.contact}` : "No contact left"];
   try {
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: lines.join("\n").slice(0, 1900), allowed_mentions: { parse: [] } }),
-      signal: AbortSignal.timeout(3000),
-    });
+    await postWebhook(url, lines.join("\n").slice(0, 1900));
   } catch (e) {
     console.error("feedback webhook failed:", (e as Error).message);
   }

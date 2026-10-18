@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { snapToCell } from "@/lib/h3";
 import { meet } from "@/lib/meet";
@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     ...parsed.data,
     // Normalise to cells; drop raw coordinates.
     origins: parsed.data.origins.map((o) => ({ memberId: o.memberId, cell: "cell" in o ? o.cell : snapToCell(o.landmark) })),
-  });
+  }, { later: after });
   return NextResponse.json(body, { status });
 }

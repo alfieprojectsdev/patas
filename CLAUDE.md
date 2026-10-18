@@ -119,13 +119,18 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   Map pins that overlap are pushed out after fitBounds (`layoutPins` in
   `map.tsx`); the selected pin never moves. Use an `on` class for checked
   states, not `:has()` (an unsupported selector drops the whole rule).
-- Hosting: Vercel (`sin1`) + Neon Postgres (Singapore), deployed with the
-  Vercel CLI from this machine because the map file is gitignored. Steps in
-  `docs/deploy.md`. `supabase/migrations/` is just the folder name; there's no
+- Hosting: Vercel (`sin1`) + Neon Postgres (Singapore). Every push to `main`
+  deploys from GitHub; the `vercel-build` script downloads the map file
+  during the build (it's gitignored). Steps in `docs/deploy.md`. `supabase/migrations/` is just the folder name; there's no
   Supabase in the stack.
 - `src/lib/db.ts` — `pg` when `DATABASE_URL` is set; otherwise (dev only)
   PGlite in `.data/pglite`. Migrations: `supabase/migrations/NNNN_*.sql`,
   tracked in `schema_migrations`. Tests run the same files on in-memory PGlite.
+- `src/lib/upstream-alert.ts` — when a search fails, `meet` logs stage,
+  provider, mode, matrix size, elapsed ms and an error label ("timeout",
+  "ORS 503"), never cells or bodies, and pings ALERT_WEBHOOK_URL (else
+  FEEDBACK_WEBHOOK_URL) at most once per provider and mode per hour, counted
+  in `rate_limits`. No health probe yet: GitHub Actions is blocked on billing.
 - `src/lib/rate-limit.ts` — Postgres fixed-window limiter on meet/create/join
   (stores sha256 of the IP). Fails open; no database = no limit on /api/meet.
 - `src/lib/traffic.ts` — display-only rush-hour range (1.5–2× clear-road ORS

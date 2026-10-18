@@ -5,6 +5,7 @@ import { getProvider } from "./routing.ts";
 import { rankVenues } from "./scoring.ts";
 import { originInScope, venueInScope } from "./scope.ts";
 import { venueById } from "./venues.ts";
+import { alertFailure, describeFailure, errorKind, type Failure } from "./upstream-alert.ts";
 import { cellCenter, isValidOriginCell } from "./h3.ts";
 import { bandFor, covers, lookup, type PrecomputedTable } from "./precomputed.ts";
 import type { CostMatrix, Origin, TravelMode, Venue, VenueScore } from "./types";
@@ -53,7 +54,16 @@ export function placeUsual(ranked: VenueScore[], usualId: string): { index: numb
   return index < 0 ? null : { index, of: ranked.length };
 }
 
-export async function meet({ origins: input, mode, priorBurden, departureTime, usual }: MeetInput): Promise<MeetOutcome> {
+/**
+ * `later` runs work that shouldn't hold up the response (the failure alert).
+ * Routes pass Next's `after`; elsewhere (tests, scripts) the task just starts.
+ */
+export type MeetOptions = { later?: (task: () => Promise<unknown>) => void };
+
+export async function meet(
+  { origins: input, mode, priorBurden, departureTime, usual }: MeetInput,
+  { later = (task) => void task() }: MeetOptions = {},
+): Promise<MeetOutcome> {
   const cells = input.map((o) => o.cell);
   if (!cells.every((c) => isValidOriginCell(c))) return { status: 400, body: { error: "invalid cell" } };
   const origins: Origin[] = input.map((o, i) => ({ memberId: o.memberId, landmark: cellCenter(cells[i]) }));
@@ -78,6 +88,11 @@ export async function meet({ origins: input, mode, priorBurden, departureTime, u
   let venues: Venue[];
   let matrix: CostMatrix;
   let source: string;
+  // For the failure log: only names, sizes and times, never cells or coordinates.
+  let stage: Failure["stage"] = table ? "table" : "candidates";
+  let providerName = table ? table.provider : "";
+  let size = "-";
+  let started = Date.now();
   try {
     if (table) {
       // TODO(claude-code): host options need a cell→cell table; public venues only for now.
@@ -86,16 +101,22 @@ export async function meet({ origins: input, mode, priorBurden, departureTime, u
       source = `precomputed:${table.provider}:${table.builtAt.slice(0, 10)}`;
     } else {
       const provider = getProvider();
+      providerName = provider.name;
       if (!provider.supports.includes(mode)) {
         return { status: 400, body: { error: `mode ${mode} not supported by ${provider.name}` } };
       }
       venues = await findCandidates(origins);
       if (usualVenue && !venues.some((v) => v.venueId === usualVenue.venueId)) venues.push(usualVenue);
+      stage = "routing";
+      size = `${origins.length}x${venues.length}`;
+      started = Date.now();
       matrix = await provider.minutes(origins.map((o) => o.landmark), venues.map((v) => v.location), mode, departureTime ? depart : undefined);
       source = `live:${provider.name}`;
     }
   } catch (e) {
-    console.error("meet failed:", (e as Error).message); // message only, no payload
+    const failure: Failure = { stage, provider: providerName, mode, size, ms: Date.now() - started, error: errorKind(e) };
+    console.error(`meet ${describeFailure(failure)}`);
+    later(() => alertFailure(failure));
     return { status: 502, body: { error: "upstream failure" } };
   }
 
