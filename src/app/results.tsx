@@ -32,7 +32,7 @@ export type UsualResult = (Result & { rank: number; of: number }) | { venueId: s
 export type ResultMember = { name: string; c: MemberColor; initial: string };
 
 export const MODES: { value: Mode; label: string }[] = [
-  { value: "DRIVE", label: "Car or ride-hail" },
+  { value: "DRIVE", label: "Car or ride‑hail" },
   { value: "WALK", label: "Walking" },
   { value: "RAIL", label: "Train" },
 ];

@@ -46,6 +46,12 @@ Groups are creatures of habit, so there's an optional **Your usual spot** field.
 
 The screenshots use real OpenRouteService driving times, which assume clear roads. Next to each driving time, Patas shows a rough rush-hour range of 1.5 to 2 times that figure. The range comes from the [TomTom Traffic Index](https://www.tomtom.com/traffic-index/) averages for Metro Manila (about 21 km/h overall, 19 km/h at rush hour, against the 26–37 km/h that OpenRouteService implies across QC). It's a city-wide average, not live traffic, so it sets expectations without changing the ranking. Patas is for planning a meeting ahead of time, not live navigation.
 
+### Train
+
+The **Train** mode adds LRT-1, LRT-2 and MRT-3. For each member and venue, Patas takes the faster of walking all the way, or getting to a station, waiting half the usual gap between trains, riding (with transfers) and walking to the venue. Getting to the station is a walk of up to 30 minutes or, when it's faster, a car, taxi or tricycle ride of up to 45 minutes, counted as the clear-road driving time plus 5 minutes to get a ride. Each time someone enters a station, including at a transfer, Patas adds 5 minutes for security and tapping in. In this mode the shortlist also includes venues beside the stations that suit the group.
+
+The figures are in [`data/rail-lines.json`](data/rail-lines.json): each line's end-to-end time, the usual gap between trains and the transfer walks, each with its source. The two 5-minute figures are assumptions and are marked as such. Run times between stations are the end-to-end time split by distance, not timetable data, and the model doesn't know about first and last trains yet. Jeepneys, UVs and buses aren't modelled, so a member whose real trip to the station is a jeepney ride gets the car or tricycle estimate instead.
+
 ## Feedback
 
 Every page has a **Feedback** link in the footer. It opens a short form: what kind of feedback it is, a message, and an optional way to reply. Submissions are stored in the database and can also ping a private Discord channel. The form asks people not to include addresses, phone numbers or full names.
@@ -64,6 +70,7 @@ Patas was built for high school students, who are minors, so the design keeps ev
 - Two outside services receive requests. The routing provider (openrouteservice) gets cell centres, not landmarks. [GoatCounter](https://www.goatcounter.com) counts page views and a few anonymous actions (a search, a group created, someone joined, a landmark picked from the map, a usual spot compared, feedback sent). It uses no cookies, and group pages are reported to it as `/g/_`, so it never learns which group.
 - Feedback is stored with the page path (no `?` or `#` part, group ids blanked) and the browser type, and deleted after 180 days.
 - The notice members actually read is at [/privacy](https://patas.ithinkandicode.space/privacy). It covers what's stored, for how long, and who sees what.
+- The Train mode never says which station anyone boards or leaves at, because in a group that would hint at where they start.
 - Nothing location-related is logged, and the only location data stored is those encrypted, expiring cells.
 
 ### Design notes: the map finder
