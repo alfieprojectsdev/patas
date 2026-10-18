@@ -9,13 +9,15 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   `npm run fetch:boundary`); origins allowed within 5 km of it (Cainta,
   Bacoor, Meycauayan and other edges of Rizal, Cavite and Bulacan). Bbox is
   only a pre-filter; it takes in part of Manila Bay.
-- The legal boundary runs up to ~17 km into Manila Bay, so fetch:boundary
-  also writes `AREA_LAND_RING`, clipped to the OSM mainland coastline
-  (`src/lib/coast.ts`), for the map outline and precompute cells. Scope
-  still uses `AREA_RING`. Where it looks like sea on the map, check OSM
-  first: the Valenzuela/Obando border runs through fishponds, and Pasay's
-  reclaimed land is in OSM's coastline but not in the basemap tiles yet.
-  Laguna de Bay isn't clipped (lakes aren't coastline).
+- The legal boundary runs up to ~17 km into Manila Bay and into Laguna de
+  Bay, so fetch:boundary also writes `AREA_LAND_RING`, clipped to the OSM
+  mainland coastline and the lake's outer shore (relation 79348) with
+  `src/lib/coast.ts`, for the map outline and precompute cells. Scope still
+  uses `AREA_RING`, so piers, the floating restaurant off Taguig and shore
+  landmarks whose cell centre is in the water still count. Where it looks
+  like water on the map, check OSM first: the Valenzuela/Obando border runs
+  through fishponds, and Pasay's reclaimed land is in OSM's coastline but
+  not in the basemap tiles yet.
 - Out-of-area error is generic (doesn't say which member).
 - Landmarks are labelled with the city they're in, from
   `data/mm-cities.json` (17 city outlines, `scripts/fetch-cities.ts`); only
@@ -38,7 +40,7 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   `<mode>_<band>.json`, else falls back to live routing. Response `source`
   says which.
 - Budget first: `--dry-run` prints elements/requests. Metro Manila clipped to
-  land gives 6,534 cells. Check provider quotas before a full run.
+  land gives 5,664 cells. Check provider quotas before a full run.
 - Tables cover service-area cells only; if any origin cell is missing (buffer-zone
   member) the API routes live instead.
 - One traffic-aware Google build per band fixes ORS's no-traffic bias.

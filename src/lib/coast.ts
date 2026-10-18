@@ -71,12 +71,33 @@ function crossing(p: Pt, q: Pt, c: Pt[]): { pos: number; pt: Pt } | null {
   return found && { pos: found.pos, pt: found.pt };
 }
 
-/** Coastline points strictly between two positions on a chain, in travel order. */
+const isClosed = (c: Pt[]) => c.length > 3 && c[0][0] === c.at(-1)![0] && c[0][1] === c.at(-1)![1];
+
+/**
+ * Shore points strictly between two positions on a chain, in travel order.
+ * On a closed shore (a lake) there are two ways round; take the shorter, which
+ * is the stretch inside the ring being clipped.
+ */
 function between(c: Pt[], from: number, to: number): Pt[] {
   const out: Pt[] = [];
-  if (from <= to) for (let i = Math.floor(from) + 1; i <= Math.ceil(to) - 1; i++) out.push(c[i]);
-  else for (let i = Math.ceil(from) - 1; i >= Math.floor(to) + 1; i--) out.push(c[i]);
+  if (!isClosed(c)) {
+    if (from <= to) for (let i = Math.floor(from) + 1; i <= Math.ceil(to) - 1; i++) out.push(c[i]);
+    else for (let i = Math.ceil(from) - 1; i >= Math.floor(to) + 1; i--) out.push(c[i]);
+    return out;
+  }
+  const n = c.length - 1; // the last point repeats the first
+  const ahead = (to - from + n) % n;
+  if (ahead <= n / 2) for (let v = Math.floor(from) + 1; v < from + ahead; v++) out.push(c[v % n]);
+  else for (let v = Math.ceil(from) - 1; v > from - (n - ahead); v--) out.push(c[((v % n) + n) % n]);
   return out;
+}
+
+/** Pure: a water body's outer ring turned so the water is on its right, like a coastline. */
+export function shoreOf(waterRing: Pt[]): Pt[] {
+  // Shoelace: positive area means counterclockwise, which has the inside on the left.
+  let area = 0;
+  for (let i = 0; i < waterRing.length - 1; i++) area += waterRing[i][0] * waterRing[i + 1][1] - waterRing[i + 1][0] * waterRing[i][1];
+  return area > 0 ? [...waterRing].reverse() : waterRing;
 }
 
 /**
