@@ -17,6 +17,8 @@ import type { LatLng } from "../src/lib/types";
 type LinesFile = {
   entryMin: number;
   entryNote: string;
+  rideWaitMin: number;
+  rideWaitNote: string;
   lines: { id: string; endToEndMin: number; headwayMin: number; sources: string[]; stations: string[] }[];
   transfers: { a: [string, string]; b: [string, string]; walkMin: number; source: string }[];
 };
@@ -90,6 +92,8 @@ writeFileSync(
       builtAt: new Date().toISOString(),
       entryMin: spec.entryMin,
       entryNote: spec.entryNote,
+      rideWaitMin: spec.rideWaitMin,
+      rideWaitNote: spec.rideWaitNote,
       lines: out,
       transfers: spec.transfers,
     },

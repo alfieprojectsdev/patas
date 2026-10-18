@@ -101,7 +101,7 @@ export async function meet(
       matrix = lookup(table, cells);
       source = `precomputed:${table.provider}:${table.builtAt.slice(0, 10)}`;
     } else {
-      // Train + walking wraps whichever walking provider is configured.
+      // Train mode wraps whichever provider is configured, for its walking and driving times.
       const provider = mode === "RAIL" ? railProvider(getProvider()) : getProvider();
       providerName = provider.name;
       if (!provider.supports.includes(mode)) {

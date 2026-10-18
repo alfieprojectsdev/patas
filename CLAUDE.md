@@ -18,7 +18,7 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - Fares, when they're built: tricycle fares are set per LGU, so that's 17
   fare tables now, not one QC ordinance.
 - Rail (LRT-1, LRT-2, MRT-3) runs across city lines, which is part of why
-  Metro Manila beats QC-only; a "Train + walking" mode is the planned next step.
+  Metro Manila beats QC-only. See "Train" in Layout.
 - Curated venue allowlist is still tractable per city (public libraries,
   schools, malls that tolerate student groups).
 
@@ -133,6 +133,16 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   in `rate_limits`. No health probe yet: GitHub Actions is blocked on billing.
 - `src/lib/rate-limit.ts` — Postgres fixed-window limiter on meet/create/join
   (stores sha256 of the IP). Fails open; no database = no limit on /api/meet.
+- `src/lib/rail.ts` — "Train" mode (RAIL): LRT-1, LRT-2, MRT-3 from
+  `data/rail.json` (built by `scripts/fetch-rail.ts` from the hand-kept
+  `data/rail-lines.json`; every figure has a source or is marked as an
+  assumption). Per member and venue: the faster of walking all the way, or
+  getting to a station (walk ≤30 min, or a car/tricycle ride ≤45 min =
+  clear-road drive + `rideWaitMin`), half the headway, entry time, ride with
+  transfers, walk ≤30 min to the venue. Only the first leg can be a ride.
+  Three provider requests per search, in parallel. Never returns an itinerary
+  (boarding stations would hint at members' areas). In RAIL mode the shortlist
+  also gets venues beside stations (`stationVenues`).
 - `src/lib/traffic.ts` — display-only rush-hour range (1.5–2× clear-road ORS
   driving times, from TomTom Metro Manila averages). Never feeds ranking.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.

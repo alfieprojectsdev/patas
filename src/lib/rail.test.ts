@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridRingUnsafe } from "h3-js";
-import { buildRail, combineRail, MAX_ACCESS_MIN, railProvider, type RailNet } from "./rail.ts";
+import { accessTimes, buildRail, combineRail, MAX_ACCESS_MIN, railProvider, type RailNet } from "./rail.ts";
 import { estimateProvider } from "./routing.ts";
-import { cellCenter } from "./h3.ts";
+import { cellCenter, snapToCell } from "./h3.ts";
 import { meet } from "./meet.ts";
 
 // A toy network: line A runs west to east over three stops, line B leaves A's middle stop.
@@ -41,11 +41,22 @@ test("each member gets the faster of walking and the train, with access walks ca
   assert.equal(out[0][0], 8); // walking wins
   assert.ok(Math.abs(out[0][1]! - (5 + 3 + 20 + 3)) < 1e-9, `got ${out[0][1]}`); // walk, wait 3 (A every 6), ride 20, walk
   // Too far to walk to the station: the train isn't an option.
-  const capped = combineRail(walkOV, [[MAX_ACCESS_MIN + 1]], walkAV, [0], [2], stops, ride);
+  const { access } = accessTimes([[MAX_ACCESS_MIN + 1]], [0], [[]], [], 5);
+  const capped = combineRail(walkOV, access, walkAV, [0], [2], stops, ride);
   assert.equal(capped[0][1], 90);
 });
 
-test("railProvider asks for two walking matrices and never returns more than walking", async () => {
+test("getting to a station: the faster of walking and a ride plus its wait, each capped", () => {
+  // Two members, stops 0 and 2. Walk to stop 0 only; ride to stops 0 and 2.
+  const walk = [[10], [45]];
+  const drive = [[2, 50], [12, 35]];
+  const { board, access } = accessTimes(walk, [0], drive, [0, 2], 5);
+  assert.deepEqual(board, [0, 2]);
+  assert.deepEqual(access[0], [7, null]); // ride 2+5 beats a 10 min walk; 50+5 is over the 45 min ride cap
+  assert.deepEqual(access[1], [17, 40]); // a 45 min walk is over the 30 min walk cap; 35+5 is a ride within its cap
+});
+
+test("railProvider asks for two walking matrices and one driving matrix, and never returns more than walking", async () => {
   const calls: string[] = [];
   const counting = {
     ...estimateProvider,
@@ -58,10 +69,22 @@ test("railProvider asks for two walking matrices and never returns more than wal
   const venues = [cellCenter("89694ec1dcbffff"), cellCenter("89694ec2967ffff")]; // Ayala (MRT-3), and the origin itself
   const [walk] = await estimateProvider.minutes(origins, venues, "WALK");
   const [rail] = await railProvider(counting).minutes(origins, venues, "RAIL");
-  assert.equal(calls.length, 2);
-  assert.ok(calls.every((c) => c.endsWith(":WALK")));
+  assert.equal(calls.length, 3);
+  assert.equal(calls.filter((c) => c.endsWith(":WALK")).length, 2);
+  assert.equal(calls.filter((c) => c.endsWith(":DRIVE")).length, 1); // origins to their nearest stations
   assert.ok(rail[0]! < walk[0]!, `Katipunan to Ayala: rail ${rail[0]} vs walk ${walk[0]}`);
   assert.equal(rail[1], walk[1]); // already there: walking (0 min) wins
+});
+
+test("a member far from any line rides to a station instead of walking all the way", async () => {
+  const fairview = cellCenter(snapToCell({ lat: 14.7353, lng: 121.0598 })); // Fairview Terraces, ~6 km from North Avenue
+  const ayala = cellCenter("89694ec1dcbffff");
+  const [walk] = await estimateProvider.minutes([fairview], [ayala], "WALK");
+  const walkOnly = { ...estimateProvider, supports: ["WALK" as const] };
+  const [noRide] = await railProvider(walkOnly).minutes([fairview], [ayala], "RAIL");
+  const [withRide] = await railProvider(estimateProvider).minutes([fairview], [ayala], "RAIL");
+  assert.equal(noRide[0], walk[0]); // too far to walk to a station: no train
+  assert.ok(withRide[0]! < walk[0]! / 2, `Fairview to Ayala: ${withRide[0]} with a ride vs ${walk[0]} walking`);
 });
 
 test("meet accepts RAIL and ranks with train times", async () => {

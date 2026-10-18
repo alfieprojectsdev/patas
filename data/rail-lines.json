@@ -2,6 +2,8 @@
   "about": "Hand-maintained. Station order, end-to-end minutes, typical minutes between trains and transfer walks for the lines that are running. scripts/fetch-rail.ts adds station positions from OpenStreetMap and writes data/rail.json. Figures are secondary sources checked on 2026-10-18; replace them with operator data when available.",
   "entryMin": 5,
   "entryNote": "Assumption, not measured: minutes to get through security and tap in, at the first station and again at each transfer (fares aren't integrated, so you tap out and in). Peak-hour queues can be much longer.",
+  "rideWaitMin": 5,
+  "rideWaitNote": "Assumption, not measured: minutes to get a ride to the station (booking and waiting for a car, or finding a tricycle), added to the clear-road driving time. Used only when it beats walking to a station.",
   "lines": [
     {
       "id": "LRT-1",

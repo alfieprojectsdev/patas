@@ -34,7 +34,7 @@ export type ResultMember = { name: string; c: MemberColor; initial: string };
 export const MODES: { value: Mode; label: string }[] = [
   { value: "DRIVE", label: "Car or ride-hail" },
   { value: "WALK", label: "Walking" },
-  { value: "RAIL", label: "Train + walking" },
+  { value: "RAIL", label: "Train" },
 ];
 export const modeLabel = (m: Mode) => MODES.find((o) => o.value === m)!.label;
 
@@ -81,9 +81,10 @@ function Caveat({ source, rush }: { source: string; rush: boolean }) {
       <div className="caveat">
         <p>
           <b>Train times use typical run times and waits, not live schedules.</b> LRT-2 trains come about every 13 minutes;
-          LRT-1 and MRT-3 every 4. The last trains leave between about 9 and 11 pm.
+          LRT-1 and MRT-3 every 4. The last trains leave between about 9 and 11 pm. A ride to the station counts
+          clear-road driving plus 5 minutes to get one, so at rush hour it takes longer.
         </p>
-        {source.includes("openrouteservice") && <p className="credit">Walking: {ORS_CREDIT}</p>}
+        {source.includes("openrouteservice") && <p className="credit">Walking and driving: {ORS_CREDIT}</p>}
       </div>
     );
   }
@@ -129,7 +130,7 @@ export function ModePicker({ mode, onChange }: { mode: Mode; onChange: (m: Mode)
           </label>
         ))}
       </div>
-      <p className="hint">Train means LRT-1, LRT-2 and MRT-3 plus walking. Jeepney, UV and bus times aren't supported yet.</p>
+      <p className="hint">Train means LRT-1, LRT-2 and MRT-3. Members walk to a station, or take a car, taxi or tricycle there when that's faster. Jeepney, UV and bus times aren't supported yet.</p>
     </section>
   );
 }
