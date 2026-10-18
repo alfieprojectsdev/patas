@@ -20,7 +20,8 @@ test("wrong resolution rejected", () => {
 test("service-area cells include UP Diliman's cell", () => {
   const cells = new Set(serviceAreaCells(H3_RES));
   assert.ok(cells.has(snapToCell(upd)));
-  assert.ok(cells.size > 1300 && cells.size < 1700); // polygon, not bbox (~3.6k)
+  // Metro Manila: 8,569 cells at res 9 (the OSM boundary takes in some of Manila Bay).
+  assert.ok(cells.size > 8000 && cells.size < 9500);
 });
 
 test("lookup returns rows per origin; unknown cell → nulls", () => {

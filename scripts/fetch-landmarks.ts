@@ -1,26 +1,27 @@
 /**
- * Rebuild data/qc-landmarks.json: named public landmarks members can pick as
- * their starting point, inside QC plus the origin buffer.
+ * Rebuild data/mm-landmarks.json: named public landmarks members can pick as
+ * their starting point, inside Metro Manila plus the origin buffer.
  *
- *   node --experimental-strip-types scripts/fetch-landmarks.ts [--out data/qc-landmarks.json]
+ *   node --experimental-strip-types scripts/fetch-landmarks.ts [--out data/mm-landmarks.json]
  *
  * Stores H3 res-9 cells, not coordinates. Data © OpenStreetMap contributors, ODbL.
  */
 import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { ORIGIN_BUFFER_KM, QC_BBOX, originInScope, venueInScope } from "../src/lib/scope.ts";
+import { ORIGIN_BUFFER_KM, AREA_BBOX, originInScope } from "../src/lib/scope.ts";
+import { cityOf } from "./cities.ts";
 import { snapToCell } from "../src/lib/h3.ts";
 import { haversineKm } from "../src/lib/scoring.ts";
 import type { Landmark, LandmarkKind } from "../src/lib/landmarks.ts";
-import { overpassFetch, snapshotJson } from "./overpass.ts";
+import { overpassFetchInParts, snapshotJson } from "./overpass.ts";
 
-const { values } = parseArgs({ options: { out: { type: "string", default: "data/qc-landmarks.json" } } });
+const { values } = parseArgs({ options: { out: { type: "string", default: "data/mm-landmarks.json" } } });
 
 const dLat = ORIGIN_BUFFER_KM / 111.32;
 const dLng = ORIGIN_BUFFER_KM / (111.32 * Math.cos((14.68 * Math.PI) / 180));
-const b = QC_BBOX;
-const json = await overpassFetch(
-  `[out:json][timeout:170][bbox:${b.south - dLat},${b.west - dLng},${b.north + dLat},${b.east + dLng}];
+const b = AREA_BBOX;
+const json = await overpassFetchInParts(
+  (bbox) => `[out:json][timeout:170][bbox:${bbox}];
 (
   nwr["railway"="station"]["name"];
   nwr["shop"="mall"]["name"];
@@ -29,7 +30,9 @@ const json = await overpassFetch(
   node["place"~"^(suburb|neighbourhood|quarter)$"]["name"];
 );
 out center tags;`,
+  { south: b.south - dLat, west: b.west - dLng, north: b.north + dLat, east: b.east + dLng },
   "landmark snapshot",
+  { rows: 3, cols: 2 },
 );
 
 function kindOf(t: Record<string, string>): LandmarkKind | null {
@@ -79,7 +82,8 @@ for (const el of json.elements) {
   landmarks.push({
     name,
     kind,
-    area: t["addr:city"] || t["is_in:city"] || (venueInScope(p) ? "Quezon City" : "near QC"),
+    // Inside Metro Manila the city outline decides, so names are consistent ("Quezon City", not "QC").
+    area: cityOf(p) ?? (t["addr:city"] || t["is_in:city"] || "near Metro Manila"),
     cell: snapToCell(p),
     ...(aka.length ? { aka } : {}),
   });

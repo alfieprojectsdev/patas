@@ -41,7 +41,7 @@ export default function Home() {
           </a>
           <p className="lede">Find a fair place to meet, so nobody gets stuck with the long commute.</p>
         </div>
-        <p className="scope">Quezon City only for now. Members can start up to 5 km outside QC.</p>
+        <p className="scope">Metro Manila only for now. Members can start up to 5 km outside it.</p>
       </header>
 
       <div className="home-grid">

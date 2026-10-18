@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { leafletLayer } from "protomaps-leaflet";
-import { QC_RING } from "@/lib/qc-boundary";
+import { AREA_RING } from "@/lib/service-area";
 
 /**
  * Map of members' landmark cells and the ranked venues.
  *
  * Tiles: a Metro Manila PMTiles extract served from our own /public folder
  * (npm run fetch:tiles), drawn by protomaps-leaflet. No third-party tile
- * server sees which part of QC a member is looking at.
+ * server sees which part of Metro Manila a member is looking at.
  *
  * Members are drawn as their ~200 m cell with an initial in it; names live in
  * the legend beside the map, so nothing floats over the pins. Venue pins that
@@ -31,19 +31,20 @@ export type MapVenue = { venueId: string; rank: number; name: string; location: 
 // object storage (it must answer HTTP range requests and allow CORS).
 const TILES_URL = process.env.NEXT_PUBLIC_TILES_URL || "/tiles/metro-manila.pmtiles";
 
-const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.54, 120.93], [14.83, 121.19]];
-const QC_LATLNGS = QC_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
+// Metro Manila plus the 5 km origin buffer; keep in sync with BBOX in scripts/fetch-tiles.ts.
+const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.3, 120.88], [14.83, 121.19]];
+const AREA_LATLNGS = AREA_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
 
 /** A design token's current value (light or dark); Leaflet's SVG attributes can't take var(). */
 export const cssVar = (name: string, fallback: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
-/** Basemap from our own tiles plus the dashed QC boundary. Shared by the results map and the pin picker. */
+/** Basemap from our own tiles plus the dashed Metro Manila boundary. Shared by the results map and the pin picker. */
 export function createBaseMap(el: HTMLElement, view = { center: [14.65, 121.05] as [number, number], zoom: 12 }) {
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const m = L.map(el, { ...view, minZoom: 11, maxZoom: 18, maxBounds: TILE_BOUNDS, maxBoundsViscosity: 0.8 });
   leafletLayer({ url: TILES_URL, flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
-  L.polyline(QC_LATLNGS, { color: cssVar("--qc-line", "#1f6f50"), weight: 2, dashArray: "6 6", opacity: 0.8, interactive: false }).addTo(m);
+  L.polyline(AREA_LATLNGS, { color: cssVar("--qc-line", "#1f6f50"), weight: 2, dashArray: "6 6", opacity: 0.8, interactive: false }).addTo(m);
   return m;
 }
 

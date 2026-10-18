@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { cellToLatLng, greatCircleDistance, gridDiskDistances } from "h3-js";
 
 /**
- * Landmark search over a local OSM snapshot (data/qc-landmarks.json, built by
+ * Landmark search over a local OSM snapshot (data/mm-landmarks.json, built by
  * scripts/fetch-landmarks.ts).
  *
  * Why local instead of Places/Photon autocomplete:
@@ -21,7 +21,7 @@ export type LandmarkKind = (typeof LANDMARK_KINDS)[number];
 export type Landmark = {
   name: string;
   kind: LandmarkKind;
-  area: string; // addr:city, else "Quezon City" / "near QC"; helps tell same-name parishes apart
+  area: string; // the Metro Manila city it's in, else addr:city or "near Metro Manila"; tells same-name parishes apart
   cell: string; // H3 res 9
   aka?: string[]; // short_name / alt_name, e.g. "UP Diliman"
 };
@@ -116,7 +116,7 @@ export function nearbyLandmarks<T extends Landmark>(
 let cache: Indexed[] | null = null;
 export function landmarkIndex(): Indexed[] {
   if (!cache) {
-    const f = join(process.cwd(), process.env.LANDMARKS_SNAPSHOT ?? "data/qc-landmarks.json");
+    const f = join(process.cwd(), process.env.LANDMARKS_SNAPSHOT ?? "data/mm-landmarks.json");
     if (!existsSync(f)) throw new Error("landmark snapshot missing; run scripts/fetch-landmarks.ts");
     cache = indexLandmarks((JSON.parse(readFileSync(f, "utf8")) as LandmarkSnapshot).landmarks);
   }

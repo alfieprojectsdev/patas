@@ -19,7 +19,8 @@ type Indexed = { v: Venue; near: string | null; norm: string; nameWords: string[
 /** Pure: index venues with the name of their nearest landmark. */
 export function indexVenues(venues: readonly Venue[], landmarks: readonly Landmark[]): Indexed[] {
   return venues.map((v) => {
-    const near = nearbyLandmarks(landmarks, snapToCell(v.location), 1)[0]?.name ?? null;
+    // Stored at download time by fetch-venues.ts; worked out here only for older snapshots.
+    const near = v.near ?? nearbyLandmarks(landmarks, snapToCell(v.location), 1)[0]?.name ?? null;
     const norm = normalize(v.name);
     const nameWords = norm.split(" ");
     return { v, near, norm, nameWords, allWords: [...nameWords, ...(near ? normalize(near).split(" ") : [])] };

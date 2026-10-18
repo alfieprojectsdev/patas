@@ -60,7 +60,7 @@ export async function meet({ origins: input, mode, priorBurden, departureTime, u
 
   // Generic message: don't reveal which member is out of area.
   if (!origins.every((o) => originInScope(o.landmark))) {
-    return { status: 422, body: { error: "Patas currently covers Quezon City only" } };
+    return { status: 422, body: { error: "Patas currently covers Metro Manila only" } };
   }
 
   const usualVenue = usual ? venueById(usual) : undefined;
@@ -69,7 +69,7 @@ export async function meet({ origins: input, mode, priorBurden, departureTime, u
   }
 
   const depart = departureTime ? new Date(departureTime) : new Date();
-  // Tables cover cells inside QC only; a buffer-zone member forces live routing.
+  // Tables cover cells inside the service area only; a buffer-zone member forces live routing.
   const loaded = loadTable(mode, bandFor(depart));
   // A usual spot the table doesn't cover forces live routing too.
   const table =

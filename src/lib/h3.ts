@@ -1,6 +1,6 @@
 import { cellToBoundary, cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
 import type { LatLng } from "./types";
-import { QC_RING } from "./qc-boundary.ts";
+import { AREA_RING } from "./service-area.ts";
 
 /**
  * H3 snapping — privacy quantization + precompute key.
@@ -29,11 +29,11 @@ export const isValidOriginCell = (cell: string, res = H3_RES) =>
   isValidCell(cell) && getResolution(cell) === res;
 
 /**
- * Cells whose centres fall inside the QC boundary polygon. These are the
- * precompute origins. Buffer-zone origins (outside QC) aren't in the tables;
+ * Cells whose centres fall inside the service-area polygon. These are the
+ * precompute origins. Buffer-zone origins (outside it) aren't in the tables;
  * the API routes those requests live.
  * TODO(claude-code): add buffer cells to precompute if that path gets busy.
  */
 export function serviceAreaCells(res = H3_RES): string[] {
-  return polygonToCells(QC_RING, res, true);
+  return polygonToCells(AREA_RING, res, true);
 }

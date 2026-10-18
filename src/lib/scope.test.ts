@@ -2,32 +2,37 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { kmToRing, originInScope, pointInRing, venueInScope } from "./scope.ts";
 
-test("UP Diliman, Novaliches, Cubao are in scope", () => {
-  assert.ok(venueInScope({ lat: 14.6537, lng: 121.0687 }));
-  assert.ok(venueInScope({ lat: 14.72, lng: 121.04 }));
-  assert.ok(venueInScope({ lat: 14.6203, lng: 121.0533 }));
-});
-
-test("Makati venue rejected; NAIA origin rejected even with buffer", () => {
-  assert.equal(venueInScope({ lat: 14.5547, lng: 121.0244 }), false);
-  assert.equal(originInScope({ lat: 14.51, lng: 121.02 }), false);
-});
-
-test("inside the bbox but outside QC: venue rejected, origin allowed (polygon, not bbox)", () => {
+test("venues across Metro Manila are in scope, from Navotas to Alabang", () => {
   for (const p of [
-    { lat: 14.6316, lng: 121.0838 }, // Marikina Riverbanks
-    { lat: 14.6019, lng: 121.049 }, // Greenhills, San Juan
-    { lat: 14.6096, lng: 120.9894 }, // UST, Manila
+    { lat: 14.6537, lng: 121.0687 }, // UP Diliman, Quezon City
+    { lat: 14.5547, lng: 121.0244 }, // Makati CBD
+    { lat: 14.5197, lng: 121.0153 }, // NAIA Terminal 3, Pasay
+    { lat: 14.4237, lng: 121.0423 }, // Alabang, Muntinlupa
+    { lat: 14.6505, lng: 120.9478 }, // Navotas fish port
+  ]) {
+    assert.ok(venueInScope(p));
+    assert.ok(originInScope(p));
+  }
+});
+
+test("just outside Metro Manila: origin allowed by the buffer, venue rejected", () => {
+  for (const p of [
+    { lat: 14.5786, lng: 121.1222 }, // Cainta, Rizal
+    { lat: 14.459, lng: 120.96 }, // Bacoor, Cavite
+    { lat: 14.7346, lng: 120.9572 }, // Meycauayan, Bulacan
   ]) {
     assert.equal(venueInScope(p), false);
     assert.ok(originInScope(p));
   }
 });
 
-test("origin just north of QC allowed by buffer, venue not", () => {
-  const p = { lat: 14.79, lng: 121.06 };
-  assert.ok(originInScope(p));
-  assert.equal(venueInScope(p), false);
+test("far outside: origin rejected even with the buffer", () => {
+  for (const p of [
+    { lat: 14.62, lng: 121.25 }, // upland Antipolo, ~13 km out
+    { lat: 14.211, lng: 121.1653 }, // Calamba
+  ]) {
+    assert.equal(originInScope(p), false);
+  }
 });
 
 test("ring helpers on a unit square", () => {
