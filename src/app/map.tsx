@@ -42,7 +42,7 @@ export const cssVar = (name: string, fallback: string) =>
 /** Basemap from our own tiles plus the dashed Metro Manila boundary. Shared by the results map and the pin picker. */
 export function createBaseMap(el: HTMLElement, view = { center: [14.65, 121.05] as [number, number], zoom: 12 }) {
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const m = L.map(el, { ...view, minZoom: 11, maxZoom: 18, maxBounds: TILE_BOUNDS, maxBoundsViscosity: 0.8 });
+  const m = L.map(el, { ...view, minZoom: 10, maxZoom: 18, maxBounds: TILE_BOUNDS, maxBoundsViscosity: 0.8 });
   leafletLayer({ url: TILES_URL, flavor: dark ? "dark" : "light", lang: "en", maxDataZoom: 15 }).addTo(m);
   L.polyline(AREA_LATLNGS, { color: cssVar("--qc-line", "#1f6f50"), weight: 2, dashArray: "6 6", opacity: 0.8, interactive: false }).addTo(m);
   return m;
