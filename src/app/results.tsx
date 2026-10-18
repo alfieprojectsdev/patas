@@ -51,6 +51,15 @@ export const CATEGORY: Record<string, string> = {
 // Exact attribution required by the HeiGIT terms (ORS_ATTRIBUTION in src/lib/routing.ts).
 const ORS_CREDIT = "© openrouteservice by HeiGIT | Data from OpenStreetMap";
 
+/** openrouteservice's walking profile wasn't answering, so routing.ts used its hiking profile. */
+const hikingNote = (source: string) =>
+  source.includes("walk:foot-hiking") && (
+    <p>
+      openrouteservice's walking service isn't answering right now, so walking times come from its hiking profile: the same
+      5 km/h on the same footpaths.
+    </p>
+  );
+
 function Caveat({ source, rush }: { source: string; rush: boolean }) {
   if (source.includes("straight-line-estimate")) {
     return (
@@ -72,6 +81,7 @@ function Caveat({ source, rush }: { source: string; rush: boolean }) {
           <b>Times assume clear roads.</b>
           {rushLine}
         </p>
+        {hikingNote(source)}
         <p className="credit">{ORS_CREDIT}</p>
       </div>
     );

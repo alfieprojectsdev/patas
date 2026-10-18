@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findCandidates } from "./candidates.ts";
-import { getProvider } from "./routing.ts";
+import { getProvider, noteOf } from "./routing.ts";
 import { rankVenues } from "./scoring.ts";
 import { originInScope, venueInScope } from "./scope.ts";
 import { venueById } from "./venues.ts";
@@ -111,7 +111,8 @@ export async function meet(
       size = `${origins.length}x${venues.length}`;
       started = Date.now();
       matrix = await provider.minutes(origins.map((o) => o.landmark), venues.map((v) => v.location), mode, departureTime ? depart : undefined);
-      source = `live:${provider.name}`;
+      const note = noteOf(matrix);
+      source = `live:${provider.name}${note ? `|${note}` : ""}`; // e.g. "live:openrouteservice|walk:foot-hiking"
     }
   } catch (e) {
     const failure: Failure = { stage, provider: providerName, mode, size, ms: Date.now() - started, error: errorKind(e) };
