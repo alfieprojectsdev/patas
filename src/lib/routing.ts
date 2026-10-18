@@ -82,7 +82,7 @@ export function withNote(m: CostMatrix, note: string | undefined): CostMatrix {
 /** Worth trying another profile: the service didn't answer, not "your request is wrong". */
 const unanswered = (e: unknown) => {
   const err = e as Error;
-  return err?.name === "TimeoutError" || err?.name === "AbortError" || (err?.name === "TypeError" && /fetch failed/i.test(err.message)) || /^ORS 5dd$/.test(err?.message ?? "");
+  return err?.name === "TimeoutError" || err?.name === "AbortError" || (err?.name === "TypeError" && /fetch failed/i.test(err.message)) || /^ORS 5\d\d$/.test(err?.message ?? "");
 };
 
 async function orsMatrix(profile: string, origins: LatLng[], destinations: LatLng[], timeoutMs: number): Promise<CostMatrix> {

@@ -51,6 +51,17 @@ test("driving never falls back, and a working foot-walking carries no note", asy
   assert.equal(noteOf(walk), undefined);
 });
 
+test("a 5xx from foot-walking also switches to foot-hiking", async () => {
+  globalThis.fetch = (async (url: string) => {
+    const profile = String(url).split("/").at(-1)!;
+    asked.push(profile);
+    return profile === "foot-walking" ? new Response("{}", { status: 503 }) : new Response(JSON.stringify({ durations: [[120]] }), { status: 200 });
+  }) as typeof fetch;
+  const m = await orsProvider.minutes([a], [b], "WALK");
+  assert.deepEqual(m, [[2]]);
+  assert.deepEqual(asked, ["foot-walking", "foot-hiking"]);
+});
+
 test("a 4xx (bad key, quota) is an error, not a reason to switch profiles", async () => {
   globalThis.fetch = (async (url: string) => {
     asked.push(String(url).split("/").at(-1)!);
