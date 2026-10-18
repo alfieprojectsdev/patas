@@ -84,6 +84,7 @@ function Caveat({ source, rush }: { source: string; rush: boolean }) {
           LRT-1 and MRT-3 every 4. The last trains leave between about 9 and 11 pm. A ride to the station counts
           clear-road driving plus 5 minutes to get one, so at rush hour it takes longer.
         </p>
+        {hikingNote(source)}
         {source.includes("openrouteservice") && <p className="credit">Walking and driving: {ORS_CREDIT}</p>}
       </div>
     );

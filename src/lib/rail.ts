@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CostMatrix, LatLng, TravelMode, Venue } from "./types";
-import type { MatrixProvider } from "./routing.ts";
+import { noteOf, withNote, type MatrixProvider } from "./routing.ts";
 import { cellCenter } from "./h3.ts";
 import { haversineKm } from "./scoring.ts";
 import { categoryRank } from "./candidates.ts";
@@ -238,7 +238,8 @@ export function railProvider(base: MatrixProvider): MatrixProvider {
       const walkOB = first.map((row) => row.slice(0, walkStops.length));
       const walkOV = first.map((row) => row.slice(walkStops.length));
       const { board, access } = accessTimes(walkOB, walkStops, drive, rideStops, rideWait);
-      return combineRail(walkOV, access, walkAV, board, alight, stops, ride);
+      // Keep the walking provider's note ("walk:foot-hiking") on the combined times.
+      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first) ?? noteOf(walkAV));
     },
   };
 }
