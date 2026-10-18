@@ -20,8 +20,8 @@ test("wrong resolution rejected", () => {
 test("service-area cells include UP Diliman's cell", () => {
   const cells = new Set(serviceAreaCells(H3_RES));
   assert.ok(cells.has(snapToCell(upd)));
-  // Metro Manila: 8,569 cells at res 9 (the OSM boundary takes in some of Manila Bay).
-  assert.ok(cells.size > 8000 && cells.size < 9500);
+  // Metro Manila clipped to land: 6,534 cells at res 9 (8,569 with the stretch of Manila Bay inside the legal boundary).
+  assert.ok(cells.size > 6000 && cells.size < 7000);
 });
 
 test("lookup returns rows per origin; unknown cell → nulls", () => {

@@ -3,11 +3,18 @@
  * Nominatim lookup. One request; run rarely. Currently Metro Manila
  * (National Capital Region, relation 147488).
  *
+ * Writes two rings. AREA_RING is the legal boundary and decides what's in
+ * scope. It takes in a stretch of Manila Bay, so AREA_LAND_RING clips it to
+ * the OSM coastline (one Overpass request, src/lib/coast.ts); that one is for
+ * drawing the outline and for precompute cells.
+ *
  *   node --experimental-strip-types scripts/fetch-boundary.ts
  *
  * Data © OpenStreetMap contributors, ODbL.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { overpassFetchInParts } from "./overpass.ts";
+import { clipToLand, stitch, type CoastWay, type Pt } from "../src/lib/coast.ts";
 
 const REL = 147488;
 const NAME = "Metro Manila";
@@ -18,7 +25,25 @@ const [hit] = (await res.json()) as Array<{ display_name: string; geojson: { typ
 if (!hit || hit.geojson.type !== "Polygon" || hit.geojson.coordinates.length !== 1) {
   throw new Error(`expected a single-ring Polygon, got ${hit?.geojson.type}`);
 }
-const ring = hit.geojson.coordinates[0].map(([lng, lat]) => [+lng.toFixed(6), +lat.toFixed(6)]);
+const ring = hit.geojson.coordinates[0].map(([lng, lat]) => [+lng.toFixed(6), +lat.toFixed(6)] as Pt);
+
+const lngs = ring.map((p) => p[0]);
+const lats = ring.map((p) => p[1]);
+const pad = 0.05;
+// Public mirrors often refuse the first try (2026-10-18: 502, 500, 504, 500), so retry a minute apart.
+// COAST_CACHE=<file> keeps the coastline response between runs while tuning the clip.
+const cache = process.env.COAST_CACHE;
+const coast = cache && existsSync(cache) ? JSON.parse(readFileSync(cache, "utf8")) : await overpassFetchInParts(
+  (bbox) => `[out:json][timeout:120];way["natural"="coastline"](${bbox});out geom;`,
+  { south: Math.min(...lats) - pad, west: Math.min(...lngs) - pad, north: Math.max(...lats) + pad, east: Math.max(...lngs) + pad },
+  "coastline",
+  { rows: 1, cols: 1, rounds: 8 },
+);
+if (cache && !existsSync(cache)) writeFileSync(cache, JSON.stringify(coast));
+// Mainland coast only. Closed chains are islands (one off Pasay, at 120.93-120.94 E, is probably
+// reclamation); following their shore would leave fragments of outline out in the bay.
+const chains = stitch(coast.elements as unknown as CoastWay[]).filter((c) => c[0][0] !== c.at(-1)![0] || c[0][1] !== c.at(-1)![1]);
+const land = clipToLand(ring, chains);
 
 writeFileSync(
   "src/lib/service-area.ts",
@@ -28,6 +53,10 @@ writeFileSync(
 export const AREA_NAME = ${JSON.stringify(NAME)};
 export const AREA_OSM_RELATION = ${REL};
 export const AREA_RING: [number, number][] = ${JSON.stringify(ring)};
+// The same ring clipped to the OSM coastline (via ${coast.host}): ${land.seaVertices} offshore vertices replaced.
+export const AREA_LAND_RING: [number, number][] = ${JSON.stringify(land.ring)};
 `,
 );
-console.log(`wrote src/lib/service-area.ts (${ring.length} vertices)`);
+console.log(
+  `wrote src/lib/service-area.ts: ${ring.length} vertices, ${land.ring.length} on land (${land.seaVertices} at sea; ${chains.length} coastline chains); westmost ${Math.min(...lngs)} -> ${Math.min(...land.ring.map((p) => p[0]))}`,
+);
