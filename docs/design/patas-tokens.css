@@ -19,7 +19,7 @@
   --error: #a3261b;
   --pin: #2f322e;            /* NEW: unselected venue pins */
   --pin-text: #ffffff;       /* NEW */
-  --qc-line: #1f6f50;        /* NEW: QC boundary (was hard-coded in map.tsx) */
+  --area-line: #1f6f50;        /* NEW: service-area boundary (was hard-coded in map.tsx) */
 
   /* Shape */
   --radius-sm: 8px;          /* NEW: dropdown options */
@@ -68,7 +68,7 @@
     --error: #ff8a7a;
     --pin: #e6e8e2;
     --pin-text: #141614;
-    --qc-line: #8fd3b4;
+    --area-line: #8fd3b4;
 
     --member-1: #5a8ef0; --member-2: #f5a050; --member-3: #d9508f; --member-4: #46c9b9; --member-5: #a88520;
     --member-6: #b49af5; --member-7: #9ad8fa; --member-8: #ff8a73; --member-9: #86a82a; --member-10: #f5dc7a;

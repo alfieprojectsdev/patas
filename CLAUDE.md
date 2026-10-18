@@ -3,20 +3,24 @@
 High school groups pick where to meet so no one carries an unfair commute.
 Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product later.
 
-## Scope: Quezon City only (MVP)
-- `src/lib/scope.ts`: venues must be inside the OSM QC boundary (relation
-  106569, `src/lib/qc-boundary.ts`, regenerate with `npm run fetch:boundary`);
-  origins allowed within 5 km of it (QC-school students often live in
-  Caloocan/San Mateo/Marikina). Bbox is only a pre-filter.
+## Scope: Metro Manila (was Quezon City only until 2026-10-18)
+- `src/lib/scope.ts`: venues must be inside the OSM Metro Manila boundary
+  (relation 147488, `src/lib/service-area.ts`, regenerate with
+  `npm run fetch:boundary`); origins allowed within 5 km of it (Cainta,
+  Bacoor, Meycauayan and other edges of Rizal, Cavite and Bulacan). Bbox is
+  only a pre-filter; it takes in part of Manila Bay.
 - Out-of-area error is generic (doesn't say which member).
-- Why QC-only helps:
-  - Fares: tricycle fares are LGU-set, so ONE QC fare ordinance covers it.
-  - QC runs its own city bus service (verify current routes and fare policy);
-    a fare-free option changes the peso side of fairness.
-  - Self-hosted OSRM/Valhalla can use a small Metro Manila clip (keep a
-    buffer — routes leave QC, e.g. via Commonwealth/Marcos Hwy/EDSA).
-  - Curated venue allowlist is tractable at city scale (QC public libraries,
-    schools, malls that tolerate student groups).
+- Landmarks are labelled with the city they're in, from
+  `data/mm-cities.json` (17 city outlines, `scripts/fetch-cities.ts`); only
+  the snapshot scripts read it, the app doesn't ship it.
+- Public Overpass refuses one Metro Manila-wide query, so the snapshot
+  scripts use `overpassFetchInParts` (a 3×2 grid, each part retried).
+- Fares, when they're built: tricycle fares are set per LGU, so that's 17
+  fare tables now, not one QC ordinance.
+- Rail (LRT-1, LRT-2, MRT-3) runs across city lines, which is part of why
+  Metro Manila beats QC-only; a "Train + walking" mode is the planned next step.
+- Curated venue allowlist is still tractable per city (public libraries,
+  schools, malls that tolerate student groups).
 
 ## H3 snapping + precomputed tables
 - `src/lib/h3.ts`: res 9 (~200 m edge). Client should snap and send only the
@@ -26,14 +30,14 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   tables per (mode, time band). API uses a table if `PRECOMPUTED_DIR` has
   `<mode>_<band>.json`, else falls back to live routing. Response `source`
   says which.
-- Budget first: `--dry-run` prints elements/requests. The QC polygon gives
-  1,506 cells. Check provider quotas before a full run.
-- Tables cover QC cells only; if any origin cell is missing (buffer-zone
+- Budget first: `--dry-run` prints elements/requests. The Metro Manila polygon gives
+  8,569 cells (some are Manila Bay). Check provider quotas before a full run.
+- Tables cover service-area cells only; if any origin cell is missing (buffer-zone
   member) the API routes live instead.
 - One traffic-aware Google build per band fixes ORS's no-traffic bias.
 - Open: host options in table mode need a cell→cell table; `data/venues.json`
-  (curated QC venues for precompute) doesn't exist yet. Don't feed it all of
-  `data/qc-venues.json` (3.2k venues × 1.5k cells is ~5M elements).
+  (curated venues for precompute) doesn't exist yet. Don't feed it all of
+  `data/mm-venues.json` (thousands of venues × 8.6k cells is tens of millions of elements).
 
 ## Core idea (don't regress this)
 - NOT a centroid problem. The centroid is only a search seed for candidate venues.
@@ -67,12 +71,12 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   (OpenRouteService, OSM data; DRIVE/WALK only: it has no motorcycle profile,
   and faking one with car times was removed;
   no TRANSIT, no traffic). `googleProvider` fallback. `ROUTING_PROVIDER` env.
-- `src/lib/candidates.ts` — candidates from `data/qc-venues.json` (OSM
+- `src/lib/candidates.ts` — candidates from `data/mm-venues.json` (OSM
   snapshot, default; no network call) or live Overpass / Google Places.
   `CANDIDATE_SOURCE` env. Shortlist = one venue per H3 cell (best category),
   then smallest straight-line worst-case distance, picks ≥400 m apart.
 - `src/lib/landmarks.ts` + `POST /api/landmarks` — landmark search over
-  `data/qc-landmarks.json` (stations, malls, schools, churches, barangay
+  `data/mm-landmarks.json` (stations, malls, schools, churches, barangay
   halls, neighbourhoods). Snapshot stores H3 cells, not coordinates. POST so
   the query never lands in access logs. `{ cell }` instead of `{ q }` returns
   the nearest landmarks (`nearbyLandmarks`, ≤6 rings ≈1.5 km) for the
@@ -84,7 +88,7 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `src/app/planner.tsx` — single-device planner UI. Nicknames stay in the
   browser; the API sees m1..mN.
 - `src/app/map.tsx` — Leaflet + protomaps-leaflet. Basemap is a self-hosted
-  Metro Manila PMTiles extract in `public/tiles/` (gitignored, ~39 MB,
+  Metro Manila PMTiles extract in `public/tiles/` (gitignored, ~60 MB,
   `npm run fetch:tiles`, needs the go-pmtiles CLI). No third-party tile
   server, so nobody outside sees which area a member is viewing. Members are
   drawn as their H3 cell; the landmarks API returns the cell outline.

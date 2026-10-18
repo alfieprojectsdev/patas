@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Origin, Venue } from "./types";
 import { centroid, haversineKm } from "./scoring.ts";
-import { qcOverpassBbox, venueInScope } from "./scope.ts";
+import { areaOverpassBbox, venueInScope } from "./scope.ts";
 import { snapToCell } from "./h3.ts";
 
 /**
@@ -10,7 +10,7 @@ import { snapToCell } from "./h3.ts";
  * member's landmark as a "host at home/nearby" option.
  *
  * Sources (CANDIDATE_SOURCE):
- *  - snapshot (default): data/qc-venues.json, built offline by
+ *  - snapshot (default): data/mm-venues.json, built offline by
  *    scripts/fetch-venues.ts. No network call, so members' cells go nowhere.
  *    Public Overpass was too slow for the request path (504s and 90 s+
  *    responses in the 2026-10-05 smoke test).
@@ -45,7 +45,7 @@ export async function findCandidates(origins: Origin[], max = 20): Promise<Venue
     src === "google" ? await googlePlaces(searchArea(origins), max)
     : src === "overpass" ? await overpass(searchArea(origins), max)
     : pickCandidates(loadSnapshot(), origins, max);
-  // QC-only scope: drop venues (incl. host options) outside the service area.
+  // Service-area scope: drop venues (incl. host options) outside Metro Manila.
   return [...publicVenues, ...hostOptions(origins)].filter((v) => venueInScope(v.location));
 }
 
@@ -103,7 +103,7 @@ let rawCache: Venue[] | null = null;
 /** Every venue in the snapshot, before de-duplication (venue search needs them all). */
 export function loadVenueSnapshot(): Venue[] {
   if (!rawCache) {
-    const f = join(process.cwd(), process.env.VENUES_SNAPSHOT ?? "data/qc-venues.json");
+    const f = join(process.cwd(), process.env.VENUES_SNAPSHOT ?? "data/mm-venues.json");
     if (!existsSync(f)) throw new Error("venue snapshot missing; run scripts/fetch-venues.ts");
     rawCache = (JSON.parse(readFileSync(f, "utf8")) as VenueSnapshot).venues;
   }
@@ -130,8 +130,8 @@ export const OVERPASS_FILTERS = [
 ];
 
 export function overpassQuery(a: SearchArea, max: number): string {
-  // around ∩ QC bbox (Overpass intersects chained spatial filters)
-  const around = `(around:${a.radiusM},${a.lat.toFixed(6)},${a.lng.toFixed(6)})${qcOverpassBbox()}`;
+  // around ∩ service-area bbox (Overpass intersects chained spatial filters)
+  const around = `(around:${a.radiusM},${a.lat.toFixed(6)},${a.lng.toFixed(6)})${areaOverpassBbox()}`;
   return `[out:json][timeout:25];
 (
 ${OVERPASS_FILTERS.map((f) => `  ${f}${around};`).join("\n")}

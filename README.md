@@ -2,7 +2,7 @@
 
 Patas picks a meeting spot for a group so that nobody gets stuck with the long commute. It started with high school group projects, and works the same for college groups, orgs and teams. *Patas* is Tagalog for "even" or "fair".
 
-It covers Quezon City only for now. Members can start up to 5 km outside the city line, since plenty of people who study or work in QC live in Caloocan, Marikina or San Mateo.
+It covers Metro Manila for now. Members can start up to 5 km outside it, since plenty of people who study or work there live in Cainta, Bacoor, Meycauayan or San Mateo.
 
 Try it at **https://patas.ithinkandicode.space**. It's a test version. It can be installed like an app: in Chrome or Edge on Android, choose **Install app** from the menu; in Safari on iPhone, tap **Share**, then **Add to Home Screen**. Offline, it shows a short "you're offline" page, and it never stores group data or results on the device.
 
@@ -85,7 +85,7 @@ You need Node 22.6 or newer.
 npm install
 ```
 
-The map needs a Metro Manila basemap (about 39 MB). Install the [`pmtiles` CLI](https://github.com/protomaps/go-pmtiles/releases), then:
+The map needs a Metro Manila basemap (about 60 MB). Install the [`pmtiles` CLI](https://github.com/protomaps/go-pmtiles/releases), then:
 
 ```bash
 npm run fetch:tiles
@@ -119,7 +119,7 @@ npm run db:migrate
 
 ## Deploying
 
-Production runs on Vercel (functions in Singapore) with a Neon Postgres database, also in Singapore. Every push to `main` builds and deploys. Vercel runs the `vercel-build` script, which downloads the 39 MB map file during the build, so it never has to be in git or uploaded. The step-by-step setup is in [docs/deploy.md](docs/deploy.md).
+Production runs on Vercel (functions in Singapore) with a Neon Postgres database, also in Singapore. Every push to `main` builds and deploys. Vercel runs the `vercel-build` script, which downloads the 60 MB map file during the build, so it never has to be in git or uploaded. The step-by-step setup is in [docs/deploy.md](docs/deploy.md).
 
 Set these on the host, since `.env.local` isn't deployed:
 
@@ -143,9 +143,9 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 | `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
 | `npm run db:purge` | Delete expired encrypted cells, groups and old feedback (the app also does this as it runs) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
-| `npm run fetch:venues` | Rebuild `data/qc-venues.json` from OpenStreetMap |
-| `npm run fetch:landmarks` | Rebuild `data/qc-landmarks.json` |
-| `npm run fetch:boundary` | Regenerate the Quezon City boundary polygon |
+| `npm run fetch:venues` | Rebuild `data/mm-venues.json` from OpenStreetMap (run `fetch:landmarks` first) |
+| `npm run fetch:landmarks` | Rebuild `data/mm-landmarks.json` (run `fetch:cities` first) |
+| `npm run fetch:boundary` | Regenerate the Metro Manila boundary polygon |
 | `npm run fetch:tiles` | Cut the Metro Manila basemap into `public/tiles/` |
 | `npm run icons` | Render the app icons in `public/icons/` from `icon.svg` |
 | `npm run screenshots` | Regenerate the images in this README against a production build (see the script header) |

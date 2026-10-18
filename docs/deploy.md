@@ -8,7 +8,7 @@ Goal: a working public test build today, for a handful of real users (students).
 |---|---|---|
 | App | Vercel (Hobby), functions in `sin1` (Singapore) | Native Next.js hosting; Singapore is the closest region to Manila |
 | Database | Neon Postgres, `aws-ap-southeast-1` (Singapore) | Washboard already runs on Neon, and `src/lib/db.ts` uses the same `pg` setup |
-| Map tiles | The 39 MB PMTiles file, downloaded during the Vercel build by the `vercel-build` script | No extra service and nothing big to upload; verified serving range requests (206) |
+| Map tiles | The ~60 MB PMTiles file, downloaded during the Vercel build by the `vercel-build` script | No extra service and nothing big to upload; verified serving range requests (206) |
 | Travel times | OpenRouteService via your HeiGIT key | Already working locally |
 | DNS | Porkbun (`ithinkandicode.space` already uses Porkbun nameservers) | One CNAME record |
 

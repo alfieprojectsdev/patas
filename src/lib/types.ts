@@ -16,6 +16,7 @@ export type Venue = {
   name: string;
   location: LatLng;
   tags: string[]; // e.g. ["cafe", "wifi"]
+  near?: string; // nearest landmark's name, stored by scripts/fetch-venues.ts for usual-spot search
 };
 
 /** cost[i][j] = cost for member i to reach venue j. null = unreachable. */

@@ -15,6 +15,7 @@
     "fetch:venues": "node --experimental-strip-types scripts/fetch-venues.ts",
     "fetch:landmarks": "node --experimental-strip-types scripts/fetch-landmarks.ts",
     "fetch:boundary": "node --experimental-strip-types scripts/fetch-boundary.ts",
+    "fetch:cities": "node --experimental-strip-types scripts/fetch-cities.ts",
     "fetch:tiles": "node --experimental-strip-types scripts/fetch-tiles.ts",
     "screenshots": "node --experimental-strip-types scripts/screenshots.ts",
     "promo": "node --experimental-strip-types scripts/promo-video.ts",

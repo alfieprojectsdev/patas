@@ -1,5 +1,5 @@
 /**
- * Cut a Metro Manila basemap (zooms 0-15, ~39 MB) from the latest Protomaps
+ * Cut a Metro Manila basemap (zooms 0-15, ~60 MB) from the latest Protomaps
  * daily OSM build into public/tiles/metro-manila.pmtiles. Only the needed
  * byte ranges are downloaded.
  *
@@ -40,7 +40,7 @@ async function pmtilesBin(): Promise<string> {
   return join(dir, "pmtiles");
 }
 
-const BBOX = "120.93,14.54,121.19,14.83"; // QC + origin buffer; keep in sync with TILE_BOUNDS in src/app/map.tsx
+const BBOX = "120.88,14.30,121.19,14.83"; // Metro Manila + origin buffer; keep in sync with TILE_BOUNDS in src/app/map.tsx
 const OUT = "public/tiles/metro-manila.pmtiles";
 
 const res = await fetch("https://build-metadata.protomaps.dev/builds.json", { signal: AbortSignal.timeout(30_000) });
