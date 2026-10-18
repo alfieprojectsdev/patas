@@ -187,17 +187,23 @@ export function railWalks(stops: Stop[]): WalkTable {
     const where = new Map(loadVenueSnapshot().map((v) => [v.venueId, v.location]));
     const stopIndex = new Map(stops.map((s, i) => [`${s.line}|${s.name}`, i]));
     const table: WalkTable = new Map();
+    let unknown = 0;
     for (const [stop, row] of Object.entries(walks)) {
       const i = stopIndex.get(stop);
       if (i == null) continue;
       for (const [venueId, minutes] of Object.entries(row)) {
         const loc = where.get(venueId);
-        if (!loc) continue;
+        if (!loc) {
+          unknown++;
+          continue;
+        }
         const k = locKey(loc);
         if (!table.has(k)) table.set(k, new Map());
         table.get(k)!.set(i, minutes);
       }
     }
+    // Venue ids change when the snapshot is rebuilt; those venues lose their train egress until the table is rebuilt too.
+    if (unknown) console.warn(`rail-walks: ${unknown} walks name venues not in the snapshot; run npm run fetch:rail-walks`);
     walkCache = table;
   }
   return walkCache;

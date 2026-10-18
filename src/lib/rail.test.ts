@@ -4,7 +4,7 @@ import { gridRingUnsafe } from "h3-js";
 import { accessTimes, buildRail, combineRail, lookupWalks, MAX_ACCESS_MIN, railNetwork, railProvider, railWalks, type RailNet } from "./rail.ts";
 import { loadVenueSnapshot } from "./candidates.ts";
 import { haversineKm } from "./scoring.ts";
-import { estimateProvider } from "./routing.ts";
+import { estimateProvider, noteOf, withNote } from "./routing.ts";
 import { cellCenter, snapToCell } from "./h3.ts";
 import { meet } from "./meet.ts";
 
@@ -124,4 +124,13 @@ test("meet accepts RAIL and ranks with train times", async () => {
     if (prev === undefined) delete process.env.ROUTING_PROVIDER;
     else process.env.ROUTING_PROVIDER = prev;
   }
+});
+
+test("a walking provider's note (e.g. the foot-hiking fallback) stays on train times", async () => {
+  const noted = {
+    ...estimateProvider,
+    minutes: async (...a: Parameters<typeof estimateProvider.minutes>) => withNote(await estimateProvider.minutes(...a), "walk:foot-hiking"),
+  };
+  const m = await railProvider(noted).minutes([cellCenter("89694ec2967ffff")], [venueByAyala()], "RAIL");
+  assert.equal(noteOf(m), "walk:foot-hiking");
 });
