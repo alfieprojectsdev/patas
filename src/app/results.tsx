@@ -14,7 +14,7 @@ export { MeetMap };
 
 // No motorcycle: openrouteservice has no motorcycle profile, and showing car
 // times under a "Motorcycle" label was wrong (motorcycles get through traffic).
-export type Mode = "DRIVE" | "WALK";
+export type Mode = "DRIVE" | "WALK" | "RAIL";
 export type Result = {
   venueId: string;
   name: string;
@@ -34,6 +34,7 @@ export type ResultMember = { name: string; c: MemberColor; initial: string };
 export const MODES: { value: Mode; label: string }[] = [
   { value: "DRIVE", label: "Car or ride-hail" },
   { value: "WALK", label: "Walking" },
+  { value: "RAIL", label: "Train + walking" },
 ];
 export const modeLabel = (m: Mode) => MODES.find((o) => o.value === m)!.label;
 
@@ -74,6 +75,18 @@ function Caveat({ source, rush }: { source: string; rush: boolean }) {
       Rush hour is about 1.5–2× longer: a Metro Manila average, not live traffic.
     </>
   );
+  if (source.includes("rail+")) {
+    // Walking legs come from the walking provider; the train part from data/rail.json.
+    return (
+      <div className="caveat">
+        <p>
+          <b>Train times use typical run times and waits, not live schedules.</b> LRT-2 trains come about every 13 minutes;
+          LRT-1 and MRT-3 every 4. The last trains leave between about 9 and 11 pm.
+        </p>
+        {source.includes("openrouteservice") && <p className="credit">Walking: {ORS_CREDIT}</p>}
+      </div>
+    );
+  }
   if (source.includes("openrouteservice") && !source.startsWith("precomputed")) {
     return (
       <div className="caveat">
@@ -116,7 +129,7 @@ export function ModePicker({ mode, onChange }: { mode: Mode; onChange: (m: Mode)
           </label>
         ))}
       </div>
-      <p className="hint">Commute (jeepney, UV, train) times aren't supported yet.</p>
+      <p className="hint">Train means LRT-1, LRT-2 and MRT-3 plus walking. Jeepney, UV and bus times aren't supported yet.</p>
     </section>
   );
 }

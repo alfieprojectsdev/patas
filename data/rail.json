@@ -1,0 +1,283 @@
+{
+ "source": "Lines: data/rail-lines.json. Station positions: OpenStreetMap via overpass-api.de, © OpenStreetMap contributors, ODbL 1.0.",
+ "builtAt": "2026-10-18T14:25:10.343Z",
+ "lines": [
+  {
+   "id": "LRT-1",
+   "endToEndMin": 45,
+   "headwayMin": 4,
+   "sources": [
+    "Round trip 91 min in 2024, per LRMC, quoted by expressway.ph/transit/lrt1-line-guide",
+    "Peak 3-4 min, off-peak about 5 min: mapa-metro.com (unofficial)"
+   ],
+   "stations": [
+    {
+     "name": "Fernando Poe Jr.",
+     "cell": "89694ed5267ffff"
+    },
+    {
+     "name": "Balintawak",
+     "cell": "89694ec252fffff"
+    },
+    {
+     "name": "Yamaha Monumento",
+     "cell": "89694ec2553ffff"
+    },
+    {
+     "name": "5th Avenue",
+     "cell": "89694ec208fffff"
+    },
+    {
+     "name": "R. Papa",
+     "cell": "89694ec201bffff"
+    },
+    {
+     "name": "Abad Santos",
+     "cell": "89694ec2047ffff"
+    },
+    {
+     "name": "Blumentritt",
+     "cell": "89694ec22a3ffff"
+    },
+    {
+     "name": "Tayuman",
+     "cell": "89694ec2233ffff"
+    },
+    {
+     "name": "Bambang",
+     "cell": "89694ec2277ffff"
+    },
+    {
+     "name": "Doroteo Jose",
+     "cell": "89694ec226fffff"
+    },
+    {
+     "name": "Carriedo",
+     "cell": "89694ec04dbffff"
+    },
+    {
+     "name": "Central Terminal",
+     "cell": "89694ec312fffff"
+    },
+    {
+     "name": "United Nations",
+     "cell": "89694ec0617ffff"
+    },
+    {
+     "name": "Pedro Gil",
+     "cell": "89694ec060fffff"
+    },
+    {
+     "name": "Quirino",
+     "cell": "89694ec0667ffff"
+    },
+    {
+     "name": "Vito Cruz",
+     "cell": "89694ec02c7ffff"
+    },
+    {
+     "name": "Gil Puyat",
+     "cell": "89694ec024fffff"
+    },
+    {
+     "name": "Libertad",
+     "cell": "89694ec11a3ffff"
+    },
+    {
+     "name": "EDSA",
+     "cell": "89694ec1123ffff"
+    },
+    {
+     "name": "Baclaran",
+     "cell": "89694ec1167ffff"
+    },
+    {
+     "name": "Redemptorist-Aseana",
+     "cell": "89694ec116bffff"
+    },
+    {
+     "name": "MIA Road",
+     "cell": "89694ec1323ffff"
+    },
+    {
+     "name": "PITX",
+     "cell": "89694ecadd7ffff"
+    },
+    {
+     "name": "Ninoy Aquino Avenue",
+     "cell": "89694ecad57ffff"
+    },
+    {
+     "name": "Dr. Santos",
+     "cell": "89694eca813ffff"
+    }
+   ]
+  },
+  {
+   "id": "LRT-2",
+   "endToEndMin": 40,
+   "headwayMin": 13,
+   "sources": [
+    "About 40 min Antipolo to Recto, 17.6 km: expressway.ph/transit/lrt2-line-guide",
+    "Every 12-14 min in 2026 because of limited fleet availability: mapa-metro.com (unofficial)"
+   ],
+   "stations": [
+    {
+     "name": "Recto",
+     "cell": "89694ec04d7ffff"
+    },
+    {
+     "name": "Legarda",
+     "cell": "89694ec0403ffff"
+    },
+    {
+     "name": "Pureza",
+     "cell": "89694ec05cbffff"
+    },
+    {
+     "name": "V. Mapa",
+     "cell": "89694ec050fffff"
+    },
+    {
+     "name": "J. Ruiz",
+     "cell": "89694ec2adbffff"
+    },
+    {
+     "name": "Gilmore",
+     "cell": "89694ec2a13ffff"
+    },
+    {
+     "name": "Betty Go-Belmonte",
+     "cell": "89694ec2aa3ffff"
+    },
+    {
+     "name": "Araneta Center-Cubao",
+     "cell": "89694ec2b9bffff"
+    },
+    {
+     "name": "Anonas",
+     "cell": "89694ec2bb7ffff"
+    },
+    {
+     "name": "Katipunan",
+     "cell": "89694ec2967ffff"
+    },
+    {
+     "name": "Santolan",
+     "cell": "89694ec7633ffff"
+    },
+    {
+     "name": "Marikina-Pasig",
+     "cell": "89694ec7047ffff"
+    },
+    {
+     "name": "Antipolo",
+     "cell": "89694ec7147ffff"
+    }
+   ]
+  },
+  {
+   "id": "MRT-3",
+   "endToEndMin": 31,
+   "headwayMin": 4,
+   "sources": [
+    "About 30 min North Avenue to Taft Avenue: expressway.ph/transit/mrt-line-guide; 32 min in a 2026 line guide",
+    "Every 3.5 min at peak: travel guide (unofficial)"
+   ],
+   "stations": [
+    {
+     "name": "North Avenue",
+     "cell": "89694ec2cb7ffff"
+    },
+    {
+     "name": "Quezon Avenue",
+     "cell": "89694ec2c2bffff"
+    },
+    {
+     "name": "GMA Kamuning",
+     "cell": "89694ec2817ffff"
+    },
+    {
+     "name": "Araneta Center-Cubao",
+     "cell": "89694ec2bd7ffff"
+    },
+    {
+     "name": "Santolan-Annapolis",
+     "cell": "89694ec2b4fffff"
+    },
+    {
+     "name": "Ortigas",
+     "cell": "89694ec0c67ffff"
+    },
+    {
+     "name": "Shaw Boulevard",
+     "cell": "89694ec0ea7ffff"
+    },
+    {
+     "name": "Boni",
+     "cell": "89694ec0e07ffff"
+    },
+    {
+     "name": "Guadalupe",
+     "cell": "89694ec0e73ffff"
+    },
+    {
+     "name": "Buendia",
+     "cell": "89694ec1d13ffff"
+    },
+    {
+     "name": "Ayala",
+     "cell": "89694ec1dcbffff"
+    },
+    {
+     "name": "Magallanes",
+     "cell": "89694ec1c77ffff"
+    },
+    {
+     "name": "Taft Avenue",
+     "cell": "89694ec112fffff"
+    }
+   ]
+  }
+ ],
+ "transfers": [
+  {
+   "a": [
+    "LRT-1",
+    "Doroteo Jose"
+   ],
+   "b": [
+    "LRT-2",
+    "Recto"
+   ],
+   "walkMin": 5,
+   "source": "Covered walkway, 3-5 min: 3d-universal.com transfer guide (unofficial)"
+  },
+  {
+   "a": [
+    "LRT-1",
+    "EDSA"
+   ],
+   "b": [
+    "MRT-3",
+    "Taft Avenue"
+   ],
+   "walkMin": 7,
+   "source": "Covered walkway, 5-7 min: 3d-universal.com transfer guide (unofficial)"
+  },
+  {
+   "a": [
+    "LRT-2",
+    "Araneta Center-Cubao"
+   ],
+   "b": [
+    "MRT-3",
+    "Araneta Center-Cubao"
+   ],
+   "walkMin": 13,
+   "source": "Through Gateway Mall, 10-15 min: 3d-universal.com transfer guide (unofficial)"
+  }
+ ],
+ "entryMin": 5,
+ "entryNote": "Assumption, not measured: minutes to get through security and tap in, at the first station and again at each transfer (fares aren't integrated, so you tap out and in). Peak-hour queues can be much longer."
+}

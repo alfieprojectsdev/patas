@@ -3,7 +3,7 @@
 
 export type LatLng = { lat: number; lng: number };
 
-export type TravelMode = "DRIVE" | "WALK" | "TRANSIT" | "TWO_WHEELER";
+export type TravelMode = "DRIVE" | "WALK" | "TRANSIT" | "TWO_WHEELER" | "RAIL"; // RAIL = train + walking, src/lib/rail.ts
 
 /** A member's starting point for ONE request. Never stored. */
 export type Origin = {

@@ -15,7 +15,7 @@ export const maxDuration = 30; // routing call has a 20 s timeout
  */
 const Body = z.object({
   k: GroupKeyZ,
-  mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER"]).default("DRIVE"),
+  mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER", "RAIL"]).default("DRIVE"),
   usual: z.string().min(1).max(80).optional(),
 });
 

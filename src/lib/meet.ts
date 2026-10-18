@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { findCandidates } from "./candidates.ts";
+import { findCandidates, loadSnapshot } from "./candidates.ts";
 import { getProvider, noteOf } from "./routing.ts";
+import { railNetwork, railProvider, stationVenues } from "./rail.ts";
 import { rankVenues } from "./scoring.ts";
 import { originInScope, venueInScope } from "./scope.ts";
 import { venueById } from "./venues.ts";
@@ -100,12 +101,18 @@ export async function meet(
       matrix = lookup(table, cells);
       source = `precomputed:${table.provider}:${table.builtAt.slice(0, 10)}`;
     } else {
-      const provider = getProvider();
+      // Train + walking wraps whichever walking provider is configured.
+      const provider = mode === "RAIL" ? railProvider(getProvider()) : getProvider();
       providerName = provider.name;
       if (!provider.supports.includes(mode)) {
         return { status: 400, body: { error: `mode ${mode} not supported by ${provider.name}` } };
       }
       venues = await findCandidates(origins);
+      if (mode === "RAIL") {
+        // Venues beside stations that suit the group, so the train has somewhere to go.
+        const extra = stationVenues(origins.map((o) => o.landmark), loadSnapshot(), railNetwork().stops);
+        venues.push(...extra.filter((e) => !venues.some((v) => v.venueId === e.venueId)));
+      }
       if (usualVenue && !venues.some((v) => v.venueId === usualVenue.venueId)) venues.push(usualVenue);
       stage = "routing";
       size = `${origins.length}x${venues.length}`;
