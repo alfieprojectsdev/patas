@@ -70,3 +70,25 @@ test("a failed send gives the hour back in the database too", async () => {
   assert.equal(await alertFailure(f, { db, send, now: t0 + 1000 }), true);
   assert.equal(sent.length, 1);
 });
+
+test("meet answers 502 without waiting for the alert; the alert is handed to `later`", async () => {
+  const { meet } = await import("./meet.ts");
+  const saved = { p: process.env.ROUTING_PROVIDER, k: process.env.ORS_API_KEY };
+  process.env.ROUTING_PROVIDER = "ors";
+  delete process.env.ORS_API_KEY; // the ORS provider throws before any request
+  try {
+    const tasks: (() => Promise<unknown>)[] = [];
+    const origins = [
+      { memberId: "m1", cell: "89694ec2967ffff" },
+      { memberId: "m2", cell: "89694ec1dcbffff" },
+    ];
+    const { status } = await meet({ origins, mode: "WALK" }, { later: (t) => void tasks.push(t) });
+    assert.equal(status, 502);
+    assert.equal(tasks.length, 1);
+  } finally {
+    for (const [k, v] of [["ROUTING_PROVIDER", saved.p], ["ORS_API_KEY", saved.k]] as const) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+});

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { unsealOrigins } from "@/lib/groups";
 import { meet } from "@/lib/meet";
@@ -34,6 +34,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ groupId
     origins: r.origins.map((o) => ({ memberId: o.alias, cell: o.cell })),
     mode: parsed.data.mode,
     usual: parsed.data.usual,
-  });
+  }, { later: after });
   return NextResponse.json(body, { status });
 }

@@ -54,7 +54,16 @@ export function placeUsual(ranked: VenueScore[], usualId: string): { index: numb
   return index < 0 ? null : { index, of: ranked.length };
 }
 
-export async function meet({ origins: input, mode, priorBurden, departureTime, usual }: MeetInput): Promise<MeetOutcome> {
+/**
+ * `later` runs work that shouldn't hold up the response (the failure alert).
+ * Routes pass Next's `after`; elsewhere (tests, scripts) the task just starts.
+ */
+export type MeetOptions = { later?: (task: () => Promise<unknown>) => void };
+
+export async function meet(
+  { origins: input, mode, priorBurden, departureTime, usual }: MeetInput,
+  { later = (task) => void task() }: MeetOptions = {},
+): Promise<MeetOutcome> {
   const cells = input.map((o) => o.cell);
   if (!cells.every((c) => isValidOriginCell(c))) return { status: 400, body: { error: "invalid cell" } };
   const origins: Origin[] = input.map((o, i) => ({ memberId: o.memberId, landmark: cellCenter(cells[i]) }));
@@ -107,7 +116,7 @@ export async function meet({ origins: input, mode, priorBurden, departureTime, u
   } catch (e) {
     const failure: Failure = { stage, provider: providerName, mode, size, ms: Date.now() - started, error: errorKind(e) };
     console.error(`meet ${describeFailure(failure)}`);
-    await alertFailure(failure);
+    later(() => alertFailure(failure));
     return { status: 502, body: { error: "upstream failure" } };
   }
 

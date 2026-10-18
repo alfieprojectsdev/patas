@@ -1,5 +1,6 @@
 import { getDb, type Db } from "./db.ts";
 import { retryAfter, type Limit } from "./rate-limit.ts";
+import { postWebhook } from "./webhook.ts";
 
 /**
  * When a search fails upstream (openrouteservice down, candidate snapshot
@@ -59,16 +60,6 @@ async function due(key: string, db: Db | null, now: number): Promise<boolean> {
 async function release(key: string, db: Db | null): Promise<void> {
   sentHere.delete(key);
   if (db) await db.query("delete from rate_limits where endpoint = $1 and client = $2", [ALERT_LIMIT.endpoint, key]);
-}
-
-async function postWebhook(url: string, content: string): Promise<void> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
-    signal: AbortSignal.timeout(3000),
-  });
-  if (!res.ok) throw new Error(`webhook ${res.status}`); // no body echo
 }
 
 /** Never throws. Sends nothing without a webhook URL (or `send`). */
