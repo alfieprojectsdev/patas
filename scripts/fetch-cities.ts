@@ -10,6 +10,7 @@
  * Data © OpenStreetMap contributors, ODbL.
  */
 import { writeFileSync } from "node:fs";
+import { AREA_OSM_RELATION } from "../src/lib/service-area.ts";
 
 const CITIES = [
   "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", "Manila", "Marikina", "Muntinlupa", "Navotas",
@@ -30,7 +31,8 @@ for (const name of CITIES) {
   const res = await fetch(url, { headers: { "User-Agent": "patas/0.1 (city outlines)" }, signal: AbortSignal.timeout(60_000) });
   if (!res.ok) throw new Error(`Nominatim ${res.status} for ${name}`);
   const hits = (await res.json()) as { osm_type: string; osm_id: number; type: string; display_name: string; geojson: Geo }[];
-  const hit = hits.find((h) => h.osm_type === "relation" && h.type === "administrative" && /Polygon/.test(h.geojson.type));
+  const hit = hits.find((h) => h.osm_type === "relation" && h.type === "administrative" && /Polygon/.test(h.geojson.type) && h.osm_id !== AREA_OSM_RELATION);
+  // "Manila, Metro Manila" can also match the region itself; skipping it above keeps the City of Manila.
   if (!hit) throw new Error(`no administrative boundary for ${name}`);
   // Outer rings only: holes don't matter for "which city is this point in".
   const rings = hit.geojson.type === "Polygon" ? [round(hit.geojson.coordinates[0])] : hit.geojson.coordinates.map((p) => round(p[0]));

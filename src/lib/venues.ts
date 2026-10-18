@@ -52,7 +52,11 @@ export function searchVenues(index: readonly Indexed[], q: string, limit = 8): V
 
 let cache: Indexed[] | null = null;
 export function venueIndex(): Indexed[] {
-  cache ??= indexVenues(loadVenueSnapshot(), landmarkIndex());
+  if (!cache) {
+    // Current snapshots store each venue's landmark; only load the landmark index if one doesn't.
+    const venues = loadVenueSnapshot();
+    cache = indexVenues(venues, venues.every((v) => v.near) ? [] : landmarkIndex());
+  }
   return cache;
 }
 

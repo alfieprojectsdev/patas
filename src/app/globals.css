@@ -19,7 +19,7 @@
   --error: #a3261b;
   --pin: #2f322e;
   --pin-text: #ffffff;
-  --qc-line: #1f6f50;
+  --area-line: #1f6f50;
 
   --radius-sm: 8px;
   --radius: 12px;
@@ -51,7 +51,7 @@
     --error: #ff8a7a;
     --pin: #e6e8e2;
     --pin-text: #141614;
-    --qc-line: #8fd3b4;
+    --area-line: #8fd3b4;
   }
 }
 

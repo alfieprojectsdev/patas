@@ -8,12 +8,11 @@
  *
  * Data © OpenStreetMap contributors, ODbL.
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { OVERPASS_FILTERS, overpassToVenues } from "../src/lib/candidates.ts";
 import { AREA_BBOX, venueInScope } from "../src/lib/scope.ts";
 import { overpassFetchInParts, snapshotJson } from "./overpass.ts";
-import { readFileSync } from "node:fs";
 import { nearbyLandmarks, type LandmarkSnapshot } from "../src/lib/landmarks.ts";
 import { snapToCell } from "../src/lib/h3.ts";
 

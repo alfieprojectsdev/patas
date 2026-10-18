@@ -18,7 +18,7 @@ import { overpassFetchInParts, snapshotJson } from "./overpass.ts";
 const { values } = parseArgs({ options: { out: { type: "string", default: "data/mm-landmarks.json" } } });
 
 const dLat = ORIGIN_BUFFER_KM / 111.32;
-const dLng = ORIGIN_BUFFER_KM / (111.32 * Math.cos((14.68 * Math.PI) / 180));
+const dLng = ORIGIN_BUFFER_KM / (111.32 * Math.cos((((AREA_BBOX.south + AREA_BBOX.north) / 2) * Math.PI) / 180));
 const b = AREA_BBOX;
 const json = await overpassFetchInParts(
   (bbox) => `[out:json][timeout:170][bbox:${bbox}];
