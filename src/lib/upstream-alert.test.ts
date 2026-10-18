@@ -9,6 +9,7 @@ test("error labels: timeouts and network failures are named, provider messages k
   assert.equal(errorKind(new DOMException("The operation was aborted due to timeout", "TimeoutError")), "timeout");
   assert.equal(errorKind(new TypeError("fetch failed")), "network error");
   assert.equal(errorKind(new Error("ORS 503")), "ORS 503");
+  assert.equal(errorKind(new SyntaxError(`Unexpected token '<', "<html>14.6" is not valid JSON`)), "unreadable response");
   assert.equal(errorKind("x".repeat(500)).length, 120);
 });
 
@@ -44,4 +45,28 @@ test("no database: the per-instance limit still holds; a failing webhook never t
     throw new Error("discord down");
   };
   assert.equal(await alertFailure(f, { db: null, send: boom, now: 0 }), false);
+  // A failed send doesn't use up the hour.
+  assert.equal(await alertFailure(f, { db: null, send, now: 1000 }), true);
+});
+
+test("a failed send gives the hour back in the database too", async () => {
+  resetAlertsForTest();
+  const db = await pgliteDb();
+  const sent: string[] = [];
+  const send = async (c: string) => void sent.push(c);
+  const boom = async () => {
+    throw new Error("discord 429");
+  };
+  const t0 = Date.parse("2026-10-18T12:00:00Z");
+  // A slow failing send: another instance's failure is turned away by the table before it gives up.
+  let blocked: boolean | undefined;
+  const slowBoom = async () => {
+    resetAlertsForTest(); // stands in for the other instance's empty map
+    blocked = await alertFailure(f, { db, send, now: t0 + 500 });
+    await boom();
+  };
+  assert.equal(await alertFailure(f, { db, send: slowBoom, now: t0 }), false);
+  assert.equal(blocked, false);
+  assert.equal(await alertFailure(f, { db, send, now: t0 + 1000 }), true);
+  assert.equal(sent.length, 1);
 });

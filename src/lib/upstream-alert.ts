@@ -28,6 +28,8 @@ export function errorKind(e: unknown): string {
   const err = e instanceof Error ? e : null;
   if (err?.name === "TimeoutError" || err?.name === "AbortError") return "timeout";
   if (err?.name === "TypeError" && /fetch failed/i.test(err.message)) return "network error";
+  // JSON.parse messages quote part of the response body, which may hold coordinates.
+  if (err?.name === "SyntaxError") return "unreadable response";
   return (err?.message ?? String(e)).slice(0, 120);
 }
 
@@ -49,13 +51,24 @@ async function due(key: string, db: Db | null, now: number): Promise<boolean> {
   return true;
 }
 
+/**
+ * Undo `due` after a failed send, so the next failure can try again. Deletes
+ * the row instead of decrementing it, because failures that were turned away
+ * while the send was in flight also bumped the count.
+ */
+async function release(key: string, db: Db | null): Promise<void> {
+  sentHere.delete(key);
+  if (db) await db.query("delete from rate_limits where endpoint = $1 and client = $2", [ALERT_LIMIT.endpoint, key]);
+}
+
 async function postWebhook(url: string, content: string): Promise<void> {
-  await fetch(url, {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
     signal: AbortSignal.timeout(3000),
   });
+  if (!res.ok) throw new Error(`webhook ${res.status}`); // no body echo
 }
 
 /** Never throws. Sends nothing without a webhook URL (or `send`). */
@@ -63,13 +76,18 @@ export async function alertFailure(f: Failure, deps: Deps = {}): Promise<boolean
   const url = process.env.ALERT_WEBHOOK_URL || process.env.FEEDBACK_WEBHOOK_URL;
   const send = deps.send ?? (url ? (c: string) => postWebhook(url, c) : null);
   if (!send) return false;
+  const key = `${f.provider}|${f.mode}`;
+  let db: Db | null = null;
+  let claimed = false;
   try {
-    const db = deps.db !== undefined ? deps.db : await (getDb()?.catch(() => null) ?? null);
-    if (!(await due(`${f.provider}|${f.mode}`, db, deps.now ?? Date.now()))) return false;
+    db = deps.db !== undefined ? deps.db : await (getDb()?.catch(() => null) ?? null);
+    if (!(await due(key, db, deps.now ?? Date.now()))) return false;
+    claimed = true;
     await send(`**Patas search ${describeFailure(f)}**\nAt most one alert per provider and mode per hour.`);
     return true;
   } catch (e) {
     console.error("alert webhook failed:", (e as Error).message);
+    if (claimed) await release(key, db).catch(() => {});
     return false;
   }
 }
