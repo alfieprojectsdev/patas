@@ -6,8 +6,8 @@ const config: NextConfig = {
   // PGlite (local dev database) loads its WASM from node_modules at runtime.
   serverExternalPackages: ["@electric-sql/pglite"],
   outputFileTracingIncludes: {
-    "/api/meet": ["./data/mm-venues.json", "./data/rail.json", "./data/tables/**/*"],
-    "/api/groups/[groupId]/meet": ["./data/mm-venues.json", "./data/rail.json", "./data/tables/**/*"],
+    "/api/meet": ["./data/mm-venues.json", "./data/rail.json", "./data/rail-walks.json", "./data/tables/**/*"],
+    "/api/groups/[groupId]/meet": ["./data/mm-venues.json", "./data/rail.json", "./data/rail-walks.json", "./data/tables/**/*"],
     "/api/landmarks": ["./data/mm-landmarks.json"],
     // Venue search tags each venue with its nearest landmark, so it needs both snapshots.
     "/api/venues": ["./data/mm-venues.json", "./data/mm-landmarks.json"],

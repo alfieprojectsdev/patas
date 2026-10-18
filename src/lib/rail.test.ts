@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridRingUnsafe } from "h3-js";
-import { accessTimes, buildRail, combineRail, MAX_ACCESS_MIN, railProvider, type RailNet } from "./rail.ts";
+import { accessTimes, buildRail, combineRail, lookupWalks, MAX_ACCESS_MIN, railNetwork, railProvider, railWalks, type RailNet } from "./rail.ts";
+import { loadVenueSnapshot } from "./candidates.ts";
+import { haversineKm } from "./scoring.ts";
 import { estimateProvider } from "./routing.ts";
 import { cellCenter, snapToCell } from "./h3.ts";
 import { meet } from "./meet.ts";
@@ -56,7 +58,26 @@ test("getting to a station: the faster of walking and a ride plus its wait, each
   assert.deepEqual(access[1], [17, 40]); // a 45 min walk is over the 30 min walk cap; 35+5 is a ride within its cap
 });
 
-test("railProvider asks for two walking matrices and one driving matrix, and never returns more than walking", async () => {
+/** A snapshot venue within a short walk of Ayala station, with an entry in the station-walk table. */
+function venueByAyala() {
+  const { stops } = railNetwork();
+  const ayala = stops.find((s) => s.name === "Ayala")!;
+  const table = railWalks(stops);
+  const v = loadVenueSnapshot().find((v) => haversineKm(v.location, ayala.point) < 0.4 && lookupWalks(table, [v.location]).alight.length);
+  assert.ok(v, "no venue by Ayala station in data/rail-walks.json");
+  return v.location;
+}
+
+test("station-to-venue walks come from the table; places not in it (a member's own area) get none", () => {
+  const { stops } = railNetwork();
+  const table = railWalks(stops);
+  const { alight, walkAV } = lookupWalks(table, [venueByAyala(), cellCenter("89694ec2967ffff")]);
+  assert.ok(alight.length > 0);
+  assert.ok(walkAV.every((row) => row[1] === null)); // a cell centre isn't a venue
+  assert.ok(walkAV.some((row) => row[0] != null && row[0] <= MAX_ACCESS_MIN));
+});
+
+test("railProvider asks for one walking and one driving matrix, and never returns more than walking", async () => {
   const calls: string[] = [];
   const counting = {
     ...estimateProvider,
@@ -66,11 +87,11 @@ test("railProvider asks for two walking matrices and one driving matrix, and nev
     },
   };
   const origins = [cellCenter("89694ec2967ffff")]; // Katipunan station (LRT-2)
-  const venues = [cellCenter("89694ec1dcbffff"), cellCenter("89694ec2967ffff")]; // Ayala (MRT-3), and the origin itself
+  const venues = [venueByAyala(), cellCenter("89694ec2967ffff")]; // by Ayala station (MRT-3), and the origin itself
   const [walk] = await estimateProvider.minutes(origins, venues, "WALK");
   const [rail] = await railProvider(counting).minutes(origins, venues, "RAIL");
-  assert.equal(calls.length, 3);
-  assert.equal(calls.filter((c) => c.endsWith(":WALK")).length, 2);
+  assert.equal(calls.length, 2);
+  assert.equal(calls.filter((c) => c.endsWith(":WALK")).length, 1); // station to venue is a table lookup
   assert.equal(calls.filter((c) => c.endsWith(":DRIVE")).length, 1); // origins to their nearest stations
   assert.ok(rail[0]! < walk[0]!, `Katipunan to Ayala: rail ${rail[0]} vs walk ${walk[0]}`);
   assert.equal(rail[1], walk[1]); // already there: walking (0 min) wins
@@ -78,7 +99,7 @@ test("railProvider asks for two walking matrices and one driving matrix, and nev
 
 test("a member far from any line rides to a station instead of walking all the way", async () => {
   const fairview = cellCenter(snapToCell({ lat: 14.7353, lng: 121.0598 })); // Fairview Terraces, ~6 km from North Avenue
-  const ayala = cellCenter("89694ec1dcbffff");
+  const ayala = venueByAyala();
   const [walk] = await estimateProvider.minutes([fairview], [ayala], "WALK");
   const walkOnly = { ...estimateProvider, supports: ["WALK" as const] };
   const [noRide] = await railProvider(walkOnly).minutes([fairview], [ayala], "RAIL");

@@ -140,7 +140,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   getting to a station (walk ≤30 min, or a car/tricycle ride ≤45 min =
   clear-road drive + `rideWaitMin`), half the headway, entry time, ride with
   transfers, walk ≤30 min to the venue. Only the first leg can be a ride.
-  Three provider requests per search, in parallel. Never returns an itinerary
+  Two provider requests per search, in parallel (walking, driving). The
+  station-to-venue walk is a lookup in `data/rail-walks.json`
+  (`npm run fetch:rail-walks`, ~51 requests; rerun after fetch:rail or
+  fetch:venues). Asking for it live was refused by ORS (error 6020, too many
+  visited nodes). Host options aren't in it, so no train to them. Never returns an itinerary
   (boarding stations would hint at members' areas). In RAIL mode the shortlist
   also gets venues beside stations (`stationVenues`).
 - `src/lib/traffic.ts` — display-only rush-hour range (1.5–2× clear-road ORS

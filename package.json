@@ -16,6 +16,8 @@
     "fetch:landmarks": "node --experimental-strip-types scripts/fetch-landmarks.ts",
     "fetch:boundary": "node --experimental-strip-types scripts/fetch-boundary.ts",
     "fetch:cities": "node --experimental-strip-types scripts/fetch-cities.ts",
+    "fetch:rail": "node --experimental-strip-types scripts/fetch-rail.ts",
+    "fetch:rail-walks": "node --env-file=.env.local --experimental-strip-types scripts/fetch-rail-walks.ts",
     "fetch:tiles": "node --experimental-strip-types scripts/fetch-tiles.ts",
     "screenshots": "node --experimental-strip-types scripts/screenshots.ts",
     "promo": "node --experimental-strip-types scripts/promo-video.ts",

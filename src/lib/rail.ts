@@ -4,7 +4,7 @@ import type { CostMatrix, LatLng, TravelMode, Venue } from "./types";
 import { noteOf, withNote, type MatrixProvider } from "./routing.ts";
 import { cellCenter } from "./h3.ts";
 import { haversineKm } from "./scoring.ts";
-import { categoryRank } from "./candidates.ts";
+import { categoryRank, loadVenueSnapshot } from "./candidates.ts";
 
 /**
  * "Train": LRT-1, LRT-2 and MRT-3 on top of walking times, with a ride to the station when it's faster.
@@ -167,6 +167,49 @@ export function railNetwork() {
   return cache;
 }
 
+/** Station-to-venue walks: venue location → stop index → minutes. */
+export type WalkTable = Map<string, Map<number, number>>;
+const locKey = (p: LatLng) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+
+let walkCache: WalkTable | null = null;
+/**
+ * The last leg, station to venue, from data/rail-walks.json (built offline by
+ * scripts/fetch-rail-walks.ts). Asking for it live meant every station near
+ * any venue times every venue, pairs up to 30 km apart, and openrouteservice
+ * refused it (error 6020). Venues outside the snapshot, such as a member's
+ * own area offered as a host option, have no entry: no train to them.
+ */
+export function railWalks(stops: Stop[]): WalkTable {
+  if (!walkCache) {
+    const f = join(process.cwd(), process.env.RAIL_WALKS_FILE ?? "data/rail-walks.json");
+    if (!existsSync(f)) throw new Error("station walks missing; run scripts/fetch-rail-walks.ts");
+    const { walks } = JSON.parse(readFileSync(f, "utf8")) as { walks: Record<string, Record<string, number>> };
+    const where = new Map(loadVenueSnapshot().map((v) => [v.venueId, v.location]));
+    const stopIndex = new Map(stops.map((s, i) => [`${s.line}|${s.name}`, i]));
+    const table: WalkTable = new Map();
+    for (const [stop, row] of Object.entries(walks)) {
+      const i = stopIndex.get(stop);
+      if (i == null) continue;
+      for (const [venueId, minutes] of Object.entries(row)) {
+        const loc = where.get(venueId);
+        if (!loc) continue;
+        const k = locKey(loc);
+        if (!table.has(k)) table.set(k, new Map());
+        table.get(k)!.set(i, minutes);
+      }
+    }
+    walkCache = table;
+  }
+  return walkCache;
+}
+
+/** Pure: the stops anyone can alight at for these destinations, and stops × destinations minutes (null: no walk). */
+export function lookupWalks(table: WalkTable, destinations: LatLng[]): { alight: number[]; walkAV: CostMatrix } {
+  const rows = destinations.map((d) => table.get(locKey(d)));
+  const alight = [...new Set(rows.flatMap((r) => (r ? [...r.keys()] : [])))];
+  return { alight, walkAV: alight.map((a) => rows.map((r) => r?.get(a) ?? null)) };
+}
+
 /**
  * Pure. Venues beside the stations that suit the group: the `stations`
  * stations whose farthest member is nearest (straight line), and for each the
@@ -214,10 +257,10 @@ const rideCandidates = (stops: Stop[], pts: LatLng[]) => [
 ];
 
 /**
- * Wraps a walking (and driving) provider. Up to three requests per search, in
+ * Wraps a walking (and driving) provider. Two requests per search, in
  * parallel: walking from origins to nearby stations and the venues; driving
  * from origins to their nearest stations (skipped if the provider can't
- * drive); walking from stations to venues.
+ * drive). Station to venue comes from the station-walk table.
  */
 export function railProvider(base: MatrixProvider): MatrixProvider {
   return {
@@ -227,19 +270,17 @@ export function railProvider(base: MatrixProvider): MatrixProvider {
       const { stops, ride, rideWait } = railNetwork();
       const walkStops = near(stops, origins);
       const rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
-      const alight = near(stops, destinations);
+      const { alight, walkAV } = lookupWalks(railWalks(stops), destinations);
       const pts = (ix: number[]) => ix.map((i) => stops[i].point);
-      const none = Promise.resolve([] as CostMatrix);
-      const [first, drive, walkAV] = await Promise.all([
+      const [first, drive] = await Promise.all([
         base.minutes(origins, [...pts(walkStops), ...destinations], "WALK"),
-        rideStops.length ? base.minutes(origins, pts(rideStops), "DRIVE") : none,
-        (walkStops.length || rideStops.length) && alight.length ? base.minutes(pts(alight), destinations, "WALK") : none,
+        rideStops.length ? base.minutes(origins, pts(rideStops), "DRIVE") : Promise.resolve([] as CostMatrix),
       ]);
       const walkOB = first.map((row) => row.slice(0, walkStops.length));
       const walkOV = first.map((row) => row.slice(walkStops.length));
       const { board, access } = accessTimes(walkOB, walkStops, drive, rideStops, rideWait);
       // Keep the walking provider's note ("walk:foot-hiking") on the combined times.
-      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first) ?? noteOf(walkAV));
+      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first));
     },
   };
 }
