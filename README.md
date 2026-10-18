@@ -129,6 +129,7 @@ Set these on the host, since `.env.local` isn't deployed:
 | `DATABASE_URL` | Group links, feedback and rate limits (Neon's pooled connection string) |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | The contact address on `/privacy` |
 | `FEEDBACK_WEBHOOK_URL` | Optional: a Discord webhook pinged for each feedback message |
+| `ALERT_WEBHOOK_URL` | Optional: a Discord webhook told when searches fail upstream (e.g. openrouteservice timing out), at most once per provider and mode per hour. Unset = `FEEDBACK_WEBHOOK_URL` |
 | `NEXT_PUBLIC_TILES_URL` | Optional: serve the map file from object storage instead |
 
 Apply new migrations to the database (`npm run db:migrate` with the direct connection string) before merging the code that needs them, because the merge deploys straight away. Without a database, the single-phone planner still works; group links and feedback say they're unavailable.
