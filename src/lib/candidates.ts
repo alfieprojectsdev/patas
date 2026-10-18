@@ -56,6 +56,7 @@ const CATEGORY_RANK: Record<string, number> = {
   library: 0, community_centre: 1, coworking: 2, "shop:mall": 3, cafe: 4, fast_food: 5, restaurant: 6,
 };
 const rank = (v: Venue) => CATEGORY_RANK[v.tags[0]] ?? 9;
+export const categoryRank = rank;
 
 /**
  * Pure: one venue per res-9 cell, keeping the best category. Venues in the
@@ -111,7 +112,8 @@ export function loadVenueSnapshot(): Venue[] {
 }
 
 let snapshotCache: Venue[] | null = null;
-function loadSnapshot(): Venue[] {
+/** The de-duplicated snapshot (one venue per H3 cell), as the shortlist uses it. */
+export function loadSnapshot(): Venue[] {
   if (!snapshotCache) snapshotCache = dedupeByCell(loadVenueSnapshot());
   return snapshotCache;
 }

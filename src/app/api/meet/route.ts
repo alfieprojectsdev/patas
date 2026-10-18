@@ -27,7 +27,7 @@ const OriginZ = z.union([
 ]);
 const Body = z.object({
   origins: z.array(OriginZ).min(2).max(10),
-  mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER"]).default("DRIVE"),
+  mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER", "RAIL"]).default("DRIVE"),
   priorBurden: z.array(z.number().nonnegative()).optional(),
   departureTime: z.string().datetime({ offset: true }).optional(),
   usual: z.string().min(1).max(80).optional(), // a venue id from /api/venues

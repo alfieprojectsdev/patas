@@ -1,0 +1,55 @@
+{
+  "about": "Hand-maintained. Station order, end-to-end minutes, typical minutes between trains and transfer walks for the lines that are running. scripts/fetch-rail.ts adds station positions from OpenStreetMap and writes data/rail.json. Figures are secondary sources checked on 2026-10-18; replace them with operator data when available.",
+  "entryMin": 5,
+  "entryNote": "Assumption, not measured: minutes to get through security and tap in, at the first station and again at each transfer (fares aren't integrated, so you tap out and in). Peak-hour queues can be much longer.",
+  "rideWaitMin": 5,
+  "rideWaitNote": "Assumption, not measured: minutes to get a ride to the station (booking and waiting for a car, or finding a tricycle), added to the clear-road driving time. Used only when it beats walking to a station.",
+  "lines": [
+    {
+      "id": "LRT-1",
+      "endToEndMin": 45,
+      "headwayMin": 4,
+      "sources": [
+        "Round trip 91 min in 2024, per LRMC, quoted by expressway.ph/transit/lrt1-line-guide",
+        "Peak 3-4 min, off-peak about 5 min: mapa-metro.com (unofficial)"
+      ],
+      "stations": [
+        "Fernando Poe Jr.", "Balintawak", "Yamaha Monumento", "5th Avenue", "R. Papa", "Abad Santos", "Blumentritt",
+        "Tayuman", "Bambang", "Doroteo Jose", "Carriedo", "Central Terminal", "United Nations", "Pedro Gil", "Quirino",
+        "Vito Cruz", "Gil Puyat", "Libertad", "EDSA", "Baclaran", "Redemptorist-Aseana", "MIA Road", "PITX",
+        "Ninoy Aquino Avenue", "Dr. Santos"
+      ]
+    },
+    {
+      "id": "LRT-2",
+      "endToEndMin": 40,
+      "headwayMin": 13,
+      "sources": [
+        "About 40 min Antipolo to Recto, 17.6 km: expressway.ph/transit/lrt2-line-guide",
+        "Every 12-14 min in 2026 because of limited fleet availability: mapa-metro.com (unofficial)"
+      ],
+      "stations": [
+        "Recto", "Legarda", "Pureza", "V. Mapa", "J. Ruiz", "Gilmore", "Betty Go-Belmonte", "Araneta Center-Cubao",
+        "Anonas", "Katipunan", "Santolan", "Marikina-Pasig", "Antipolo"
+      ]
+    },
+    {
+      "id": "MRT-3",
+      "endToEndMin": 31,
+      "headwayMin": 4,
+      "sources": [
+        "About 30 min North Avenue to Taft Avenue: expressway.ph/transit/mrt-line-guide; 32 min in a 2026 line guide",
+        "Every 3.5 min at peak: travel guide (unofficial)"
+      ],
+      "stations": [
+        "North Avenue", "Quezon Avenue", "GMA Kamuning", "Araneta Center-Cubao|Cubao", "Santolan-Annapolis", "Ortigas",
+        "Shaw Boulevard", "Boni", "Guadalupe", "Buendia", "Ayala", "Magallanes", "Taft Avenue"
+      ]
+    }
+  ],
+  "transfers": [
+    { "a": ["LRT-1", "Doroteo Jose"], "b": ["LRT-2", "Recto"], "walkMin": 5, "source": "Covered walkway, 3-5 min: 3d-universal.com transfer guide (unofficial)" },
+    { "a": ["LRT-1", "EDSA"], "b": ["MRT-3", "Taft Avenue"], "walkMin": 7, "source": "Covered walkway, 5-7 min: 3d-universal.com transfer guide (unofficial)" },
+    { "a": ["LRT-2", "Araneta Center-Cubao"], "b": ["MRT-3", "Araneta Center-Cubao"], "walkMin": 13, "source": "Through Gateway Mall, 10-15 min: 3d-universal.com transfer guide (unofficial)" }
+  ]
+}

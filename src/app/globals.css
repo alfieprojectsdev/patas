@@ -238,7 +238,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 /* Mode: a segmented pill control (still a radiogroup). */
-.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: var(--radius-pill); }
+.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; background: var(--surface-2); border-radius: var(--radius-pill); }
 .segmented label {
   min-height: var(--tap); display: grid; place-items: center; padding: 0 10px; border-radius: var(--radius-pill);
   color: var(--muted); font-weight: 600; cursor: pointer; text-align: center;

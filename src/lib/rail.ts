@@ -1,0 +1,292 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { CostMatrix, LatLng, TravelMode, Venue } from "./types";
+import { noteOf, withNote, type MatrixProvider } from "./routing.ts";
+import { cellCenter } from "./h3.ts";
+import { haversineKm } from "./scoring.ts";
+import { categoryRank, loadVenueSnapshot } from "./candidates.ts";
+
+/**
+ * "Train": LRT-1, LRT-2 and MRT-3 on top of walking times, with a ride to the station when it's faster.
+ *
+ * Rail doesn't sit in traffic, so a train trip takes about as long at 6 pm as
+ * at 10 am. For each member and venue the time is the faster of walking all
+ * the way, or: get to a station, wait half the time between trains, ride
+ * (with transfers), walk to the venue. Getting to the station is a walk or,
+ * when it's faster, a car, taxi or tricycle ride: clear-road driving time plus
+ * `rideWaitMin` to get one. Only that first leg can be a ride; a ride all the
+ * way would just be the Car mode. Getting into a station (security, tapping
+ * in) adds `entryMin`, at the start and at each transfer. Run times come from each line's
+ * end-to-end minutes, split between stations by distance. All figures are in
+ * data/rail.json (built by scripts/fetch-rail.ts from data/rail-lines.json),
+ * with their sources.
+ *
+ * Privacy: stations are public places stored as H3 cells; no itinerary
+ * (boarding or alighting station) is returned, because in a group it would
+ * hint at another member's area.
+ */
+export type RailNet = {
+  /** Getting through security and tapping in, at boarding and at each transfer. */
+  entryMin?: number;
+  /** Getting a ride to the station: booking and waiting, before the drive itself. */
+  rideWaitMin?: number;
+  lines: { id: string; endToEndMin: number; headwayMin: number; stations: { name: string; cell: string }[] }[];
+  transfers: { a: [string, string]; b: [string, string]; walkMin: number }[];
+};
+
+/** One line's stop at one station. Transfer stations appear once per line. */
+export type Stop = { line: string; name: string; point: LatLng; wait: number; entry: number };
+
+/** Walking to or from a station for longer than this isn't a train trip any more. */
+export const MAX_ACCESS_MIN = 30;
+/**
+ * A ride to the station (plus its wait) may take longer: from Fairview, the
+ * nearest station (North Avenue) is about 10 km off. Past this it's a car trip
+ * with a train ride tacked on, and the clear-road time is too optimistic to trust.
+ */
+export const MAX_RIDE_MIN = 45;
+/** Only stations this close (straight line) to someone are worth a walking-time request. */
+export const STATION_SEARCH_KM = 3;
+/** For the ride to a station: each member's nearest few stations, within this distance. */
+export const RIDE_STATIONS = 3;
+export const RIDE_SEARCH_KM = 12;
+
+/**
+ * Pure: the stops, and the riding time between every pair of them. `ride[a][b]`
+ * covers boarding at a (after the wait) to stepping off at b, including run
+ * time, transfer walks and the wait for each later train.
+ */
+export function buildRail(net: RailNet): { stops: Stop[]; ride: number[][]; rideWait: number } {
+  const stops: Stop[] = [];
+  const index = new Map<string, number>();
+  const edges: [number, number, number][] = [];
+  for (const line of net.lines) {
+    const pts = line.stations.map((s) => cellCenter(s.cell));
+    const gaps = pts.slice(1).map((p, i) => haversineKm(pts[i], p));
+    const length = gaps.reduce((a, b) => a + b, 0);
+    line.stations.forEach((s, i) => {
+      index.set(`${line.id}|${s.name}`, stops.length);
+      stops.push({ line: line.id, name: s.name, point: pts[i], wait: line.headwayMin / 2, entry: net.entryMin ?? 0 });
+    });
+    const first = stops.length - line.stations.length;
+    gaps.forEach((g, i) => {
+      const minutes = (g / length) * line.endToEndMin;
+      edges.push([first + i, first + i + 1, minutes], [first + i + 1, first + i, minutes]);
+    });
+  }
+  for (const t of net.transfers) {
+    const a = index.get(t.a.join("|"));
+    const b = index.get(t.b.join("|"));
+    if (a == null || b == null) throw new Error(`rail transfer names an unknown stop: ${t.a} / ${t.b}`);
+    edges.push([a, b, t.walkMin + stops[b].entry + stops[b].wait], [b, a, t.walkMin + stops[a].entry + stops[a].wait]);
+  }
+  // Floyd–Warshall: about 50 stops, so 125,000 steps, once per process.
+  const n = stops.length;
+  const ride = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 0 : Infinity)));
+  for (const [a, b, m] of edges) ride[a][b] = Math.min(ride[a][b], m);
+  for (let k = 0; k < n; k++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (ride[i][k] + ride[k][j] < ride[i][j]) ride[i][j] = ride[i][k] + ride[k][j];
+      }
+    }
+  }
+  return { stops, ride, rideWait: net.rideWaitMin ?? 0 };
+}
+
+/**
+ * Pure. Minutes from each member to each boarding stop in `board` (the union
+ * of `walkStops` and `rideStops`): the faster of walking and riding (drive +
+ * `rideWait`), within MAX_ACCESS_MIN and MAX_RIDE_MIN; null if neither is.
+ * `walk` is origins × walkStops, `drive` origins × rideStops.
+ */
+export function accessTimes(
+  walk: CostMatrix,
+  walkStops: number[],
+  drive: CostMatrix,
+  rideStops: number[],
+  rideWait: number,
+): { board: number[]; access: CostMatrix } {
+  const board = [...new Set([...walkStops, ...rideStops])];
+  const within = (cap: number) => (m: number | null | undefined): m is number => m != null && Number.isFinite(m) && m <= cap;
+  const walkOk = within(MAX_ACCESS_MIN);
+  const rideOk = within(MAX_RIDE_MIN);
+  const access = walk.map((_, i) =>
+    board.map((s) => {
+      const w = walk[i]?.[walkStops.indexOf(s)];
+      const d = drive[i]?.[rideStops.indexOf(s)];
+      const r = d == null ? null : d + rideWait;
+      const best = Math.min(walkOk(w) ? w : Infinity, rideOk(r) ? r : Infinity);
+      return Number.isFinite(best) ? best : null;
+    }),
+  );
+  return { board, access };
+}
+
+/**
+ * Pure. Best of walking and (walk or ride) + train + walk for every member and venue.
+ * `walkOV` is origins × venues; `walkOB` origins × boarding stops `board`, by any way of getting there;
+ * `walkAV` alighting stops `alight` × venues. Indices in board/alight point
+ * into `stops`/`ride`.
+ */
+export function combineRail(
+  walkOV: CostMatrix,
+  walkOB: CostMatrix,
+  walkAV: CostMatrix,
+  board: number[],
+  alight: number[],
+  stops: Stop[],
+  ride: number[][],
+): CostMatrix {
+  const ok = (m: number | null | undefined): m is number => m != null && Number.isFinite(m) && m <= MAX_ACCESS_MIN;
+  return walkOV.map((row, i) =>
+    row.map((walk, j) => {
+      let best = walk ?? Infinity;
+      board.forEach((b, bi) => {
+        const toStation = walkOB[i]?.[bi]; // capped by accessTimes
+        if (toStation == null || !Number.isFinite(toStation)) return;
+        alight.forEach((a, ai) => {
+          const fromStation = walkAV[ai]?.[j];
+          if (!ok(fromStation)) return;
+          const t = toStation + stops[b].entry + stops[b].wait + ride[b][a] + fromStation;
+          if (t < best) best = t;
+        });
+      });
+      return Number.isFinite(best) ? best : null;
+    }),
+  );
+}
+
+let cache: ReturnType<typeof buildRail> | null = null;
+export function railNetwork() {
+  if (!cache) {
+    const f = join(process.cwd(), process.env.RAIL_FILE ?? "data/rail.json");
+    if (!existsSync(f)) throw new Error("rail network missing; run scripts/fetch-rail.ts");
+    cache = buildRail(JSON.parse(readFileSync(f, "utf8")) as RailNet);
+  }
+  return cache;
+}
+
+/** Station-to-venue walks: venue location → stop index → minutes. */
+export type WalkTable = Map<string, Map<number, number>>;
+const locKey = (p: LatLng) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+
+let walkCache: WalkTable | null = null;
+/**
+ * The last leg, station to venue, from data/rail-walks.json (built offline by
+ * scripts/fetch-rail-walks.ts). Asking for it live meant every station near
+ * any venue times every venue, pairs up to 30 km apart, and openrouteservice
+ * refused it (error 6020). Venues outside the snapshot, such as a member's
+ * own area offered as a host option, have no entry: no train to them.
+ */
+export function railWalks(stops: Stop[]): WalkTable {
+  if (!walkCache) {
+    const f = join(process.cwd(), process.env.RAIL_WALKS_FILE ?? "data/rail-walks.json");
+    if (!existsSync(f)) throw new Error("station walks missing; run scripts/fetch-rail-walks.ts");
+    const { walks } = JSON.parse(readFileSync(f, "utf8")) as { walks: Record<string, Record<string, number>> };
+    const where = new Map(loadVenueSnapshot().map((v) => [v.venueId, v.location]));
+    const stopIndex = new Map(stops.map((s, i) => [`${s.line}|${s.name}`, i]));
+    const table: WalkTable = new Map();
+    let unknown = 0;
+    for (const [stop, row] of Object.entries(walks)) {
+      const i = stopIndex.get(stop);
+      if (i == null) continue;
+      for (const [venueId, minutes] of Object.entries(row)) {
+        const loc = where.get(venueId);
+        if (!loc) {
+          unknown++;
+          continue;
+        }
+        const k = locKey(loc);
+        if (!table.has(k)) table.set(k, new Map());
+        table.get(k)!.set(i, minutes);
+      }
+    }
+    // Venue ids change when the snapshot is rebuilt; those venues lose their train egress until the table is rebuilt too.
+    if (unknown) console.warn(`rail-walks: ${unknown} walks name venues not in the snapshot; run npm run fetch:rail-walks`);
+    walkCache = table;
+  }
+  return walkCache;
+}
+
+/** Pure: the stops anyone can alight at for these destinations, and stops × destinations minutes (null: no walk). */
+export function lookupWalks(table: WalkTable, destinations: LatLng[]): { alight: number[]; walkAV: CostMatrix } {
+  const rows = destinations.map((d) => table.get(locKey(d)));
+  const alight = [...new Set(rows.flatMap((r) => (r ? [...r.keys()] : [])))];
+  return { alight, walkAV: alight.map((a) => rows.map((r) => r?.get(a) ?? null)) };
+}
+
+/**
+ * Pure. Venues beside the stations that suit the group: the `stations`
+ * stations whose farthest member is nearest (straight line), and for each the
+ * best venue within `radiusKm`. The usual shortlist is chosen by straight-line
+ * distance, so without these the train rarely gets a venue it can reach.
+ */
+export function stationVenues(
+  origins: LatLng[],
+  pool: readonly Venue[],
+  stops: Stop[],
+  { stations = 10, radiusKm = 0.5 } = {},
+): Venue[] {
+  const ranked = [...stops].sort(
+    (a, b) => Math.max(...origins.map((o) => haversineKm(o, a.point))) - Math.max(...origins.map((o) => haversineKm(o, b.point))),
+  );
+  const picked: Venue[] = [];
+  const used: LatLng[] = [];
+  for (const s of ranked) {
+    if (used.length >= stations) break;
+    if (used.some((p) => haversineKm(p, s.point) < 0.4)) continue; // one per transfer pair
+    used.push(s.point);
+    const best = pool
+      .filter((v) => haversineKm(v.location, s.point) <= radiusKm)
+      .sort((a, b) => categoryRank(a) - categoryRank(b) || haversineKm(a.location, s.point) - haversineKm(b.location, s.point))[0];
+    if (best) picked.push(best);
+  }
+  return picked;
+}
+
+const near = (stops: Stop[], pts: LatLng[]) =>
+  stops.flatMap((s, i) => (pts.some((p) => haversineKm(p, s.point) <= STATION_SEARCH_KM) ? [i] : []));
+
+/** Each origin's RIDE_STATIONS nearest stops within RIDE_SEARCH_KM, merged. */
+const rideCandidates = (stops: Stop[], pts: LatLng[]) => [
+  ...new Set(
+    pts.flatMap((p) =>
+      stops
+        .map((s, i) => ({ i, km: haversineKm(p, s.point) }))
+        .filter((x) => x.km <= RIDE_SEARCH_KM)
+        .sort((a, b) => a.km - b.km)
+        .slice(0, RIDE_STATIONS)
+        .map((x) => x.i),
+    ),
+  ),
+];
+
+/**
+ * Wraps a walking (and driving) provider. Two requests per search, in
+ * parallel: walking from origins to nearby stations and the venues; driving
+ * from origins to their nearest stations (skipped if the provider can't
+ * drive). Station to venue comes from the station-walk table.
+ */
+export function railProvider(base: MatrixProvider): MatrixProvider {
+  return {
+    name: `rail+${base.name}`,
+    supports: ["RAIL"] as TravelMode[],
+    async minutes(origins, destinations) {
+      const { stops, ride, rideWait } = railNetwork();
+      const walkStops = near(stops, origins);
+      const rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
+      const { alight, walkAV } = lookupWalks(railWalks(stops), destinations);
+      const pts = (ix: number[]) => ix.map((i) => stops[i].point);
+      const [first, drive] = await Promise.all([
+        base.minutes(origins, [...pts(walkStops), ...destinations], "WALK"),
+        rideStops.length ? base.minutes(origins, pts(rideStops), "DRIVE") : Promise.resolve([] as CostMatrix),
+      ]);
+      const walkOB = first.map((row) => row.slice(0, walkStops.length));
+      const walkOV = first.map((row) => row.slice(walkStops.length));
+      const { board, access } = accessTimes(walkOB, walkStops, drive, rideStops, rideWait);
+      // Keep the walking provider's note ("walk:foot-hiking") on the combined times.
+      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first));
+    },
+  };
+}

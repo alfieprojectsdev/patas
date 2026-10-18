@@ -50,7 +50,7 @@ export default function Privacy() {
 
       <h2>Who else sees it</h2>
       <ul>
-        <li>Other members of your group see your nickname and your travel times to the suggested places, but never your landmark.</li>
+        <li>Other members of your group see your nickname and your travel times to the suggested places, but never your landmark or, in Train mode, which station you would use.</li>
         <li>
           Travel times come from openrouteservice (HeiGIT, Germany). It receives the centre of each ~200 m area, not your
           landmark or nickname.
