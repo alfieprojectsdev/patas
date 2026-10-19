@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridRingUnsafe } from "h3-js";
-import { accessTimes, buildRail, combineRail, lookupWalks, MAX_ACCESS_MIN, railNetwork, railProvider, railWalks, RIDE_WAIT, type RailNet } from "./rail.ts";
+import { accessTimes, buildRail, combineRail, itinerary, lookupWalks, MAX_ACCESS_MIN, railNetwork, railPath, railProvider, railWalks, RIDE_WAIT, type RailNet } from "./rail.ts";
 import { loadVenueSnapshot } from "./candidates.ts";
 import { haversineKm } from "./scoring.ts";
 import { estimateProvider, noteOf, withNote } from "./routing.ts";
@@ -167,4 +167,55 @@ test("a driving request that hangs is given up after RIDE_WAIT, not the full pro
   } finally {
     RIDE_WAIT.ms = saved;
   }
+});
+
+test("an itinerary names the stations and lines, and its minutes add up to the trip", async () => {
+  const origin = cellCenter("89694ec2967ffff"); // Katipunan (LRT-2)
+  const m = await railProvider(estimateProvider).minutes([origin], [venueByAyala()], "RAIL");
+  const legs = itinerary(m, 0, 0)!;
+  assert.ok(legs, "no itinerary");
+  const trains = legs.filter((l) => l.kind === "train");
+  assert.deepEqual(trains.map((l) => l.kind === "train" && l.line), ["LRT-2", "MRT-3"]);
+  assert.ok(legs.some((l) => l.kind === "transfer"), "LRT-2 to MRT-3 needs a transfer");
+  assert.equal(legs.at(-1)!.kind, "walk");
+  const sum = legs.reduce((s, l) => s + l.min, 0);
+  assert.ok(Math.abs(sum - m[0][0]!) < 1e-6, `legs add to ${sum}, trip is ${m[0][0]}`);
+});
+
+test("itineraries only for the single-phone planner, never by default (group links)", async () => {
+  const prev = process.env.ROUTING_PROVIDER;
+  process.env.ROUTING_PROVIDER = "estimate";
+  try {
+    const origins = [
+      { memberId: "m1", cell: "89694ec2967ffff" },
+      { memberId: "m2", cell: "89694ec1dcbffff" },
+    ];
+    const plain = await meet({ origins, mode: "RAIL" });
+    const results = (r: typeof plain) => r.body.results as { perMember: { trip?: unknown }[] }[];
+    assert.ok(results(plain).every((r) => r.perMember.every((p) => p.trip === undefined)));
+    const single = await meet({ origins, mode: "RAIL" }, { itineraries: true });
+    assert.ok(results(single).every((r) => r.perMember.every((p) => Array.isArray(p.trip))));
+    const drive = await meet({ origins, mode: "DRIVE" }, { itineraries: true });
+    assert.ok(results(drive).every((r) => r.perMember.every((p) => p.trip === undefined)));
+  } finally {
+    if (prev === undefined) delete process.env.ROUTING_PROVIDER;
+    else process.env.ROUTING_PROVIDER = prev;
+  }
+});
+
+test("railPath follows the next-hop table end to end", () => {
+  const { next } = buildRail(net);
+  assert.deepEqual(railPath(next, 0, 4), [0, 1, 3, 4]); // a1, a2, then over to b1 and on to b2
+});
+
+test("a trip has to ride a train: boarding and leaving at the same station, or only crossing a walkway, doesn't count", () => {
+  const { usesTrain } = buildRail(net);
+  assert.equal(usesTrain[0][0], false); // same stop
+  assert.equal(usesTrain[1][3], false); // a2 to b1 is the transfer walk alone
+  assert.equal(usesTrain[0][1], true);
+  assert.equal(usesTrain[0][4], true);
+  const { stops, ride } = buildRail(net);
+  // Getting to a1 is 5 min and the venue is 3 min from a1: without the rule that "train trip" (5 + wait + 0 + 3) beat a 20 min walk.
+  const out = combineRail([[20]], [[5]], [[3]], [0], [0], stops, ride, usesTrain);
+  assert.equal(out[0][0], 20);
 });

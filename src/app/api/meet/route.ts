@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     ...parsed.data,
     // Normalise to cells; drop raw coordinates.
     origins: parsed.data.origins.map((o) => ({ memberId: o.memberId, cell: "cell" in o ? o.cell : snapToCell(o.landmark) })),
-  }, { later: after });
+  }, { later: after, itineraries: true }); // single-phone planner: one person entered every landmark
   return NextResponse.json(body, { status });
 }
