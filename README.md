@@ -46,6 +46,8 @@ Groups are creatures of habit, so there's an optional **Your usual spot** field.
 
 The screenshots use real OpenRouteService driving times, which assume clear roads. Next to each driving time, Patas shows a rough rush-hour range of 1.5 to 2 times that figure. The range comes from the [TomTom Traffic Index](https://www.tomtom.com/traffic-index/) averages for Metro Manila (about 21 km/h overall, 19 km/h at rush hour, against the 26–37 km/h that OpenRouteService implies across QC). It's a city-wide average, not live traffic, so it sets expectations without changing the ranking. Patas is for planning a meeting ahead of time, not live navigation.
 
+Walking times come from openrouteservice's walking profile. On 2026-10-18 that profile stopped answering for most of a day while its other profiles worked, so if it doesn't answer within 10 seconds, Patas uses the hiking profile instead (the same 5 km/h on the same footpaths) and says so under the results.
+
 ### Train
 
 The **Train** mode adds LRT-1, LRT-2 and MRT-3. For each member and venue, Patas takes the faster of walking all the way, or getting to a station, waiting half the usual gap between trains, riding (with transfers) and walking to the venue. Getting to the station is a walk of up to 30 minutes or, when it's faster, a car, taxi or tricycle ride of up to 45 minutes, counted as the clear-road driving time plus 5 minutes to get a ride. Each time someone enters a station, including at a transfer, Patas adds 5 minutes for security and tapping in. In this mode the shortlist also includes venues beside the stations that suit the group.
@@ -147,13 +149,16 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (scoring, scope, H3, landmark search, OSM parsing, rush-hour ranges, and group links and feedback against PGlite) |
+| `npm test` | Unit tests (scoring, scope, H3, landmark and venue search, OSM parsing, rush-hour ranges, the Train model, coastline clipping, the walking fallback, failure alerts, and group links and feedback against PGlite) |
 | `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
 | `npm run db:purge` | Delete expired encrypted cells, groups and old feedback (the app also does this as it runs) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
 | `npm run fetch:venues` | Rebuild `data/mm-venues.json` from OpenStreetMap (run `fetch:landmarks` first) |
 | `npm run fetch:landmarks` | Rebuild `data/mm-landmarks.json` (run `fetch:cities` first) |
-| `npm run fetch:boundary` | Regenerate the Metro Manila boundary polygon |
+| `npm run fetch:cities` | Rebuild `data/mm-cities.json`, the 17 city outlines used to label landmarks with their city (snapshot scripts only; the app doesn't ship it) |
+| `npm run fetch:boundary` | Regenerate the Metro Manila boundary: the legal outline, which decides who's in scope, and a copy clipped to the Manila Bay coast and the Laguna de Bay shore, for the map and precompute (one Overpass and two Nominatim requests) |
+| `npm run fetch:rail` | Rebuild `data/rail.json`: station positions from OpenStreetMap for the lines in `data/rail-lines.json` |
+| `npm run fetch:rail-walks` | Rebuild `data/rail-walks.json`, walking times from each station to every venue within 2.5 km (51 openrouteservice requests; needs `ORS_API_KEY`). Rerun after `fetch:rail` or `fetch:venues` |
 | `npm run fetch:tiles` | Cut the Metro Manila basemap into `public/tiles/` |
 | `npm run icons` | Render the app icons in `public/icons/` from `icon.svg` |
 | `npm run screenshots` | Regenerate the images in this README against a production build (see the script header) |
@@ -163,7 +168,7 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 This is an MVP. Still to come:
 
 - "we met here", so the next search favours whoever travelled most last time;
-- jeepney, UV and train times, and fares;
+- jeepney, UV and bus times, first and last trains, and fares;
 - a curated list of venues that actually let groups stay for hours;
 - an option to hide each member's travel times from the rest of the group.
 
@@ -171,7 +176,9 @@ The working notes and ordered next steps are in [CLAUDE.md](CLAUDE.md).
 
 ## Data
 
-Venue, landmark, boundary and map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the ODbL. Basemap tiles are built by [Protomaps](https://protomaps.com).
+Venue, landmark, boundary, station and map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the ODbL. Basemap tiles are built by [Protomaps](https://protomaps.com).
+
+Train run times, gaps between trains and transfer walks in [`data/rail-lines.json`](data/rail-lines.json) come from the sources cited next to each figure. The station-to-venue walking times in [`data/rail-walks.json`](data/rail-walks.json) are from openrouteservice by HeiGIT, under CC-BY-SA 4.0.
 
 ## Licence
 
