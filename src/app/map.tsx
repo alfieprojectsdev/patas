@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { leafletLayer } from "protomaps-leaflet";
-import { AREA_RING } from "@/lib/service-area";
+import { AREA_LAND_RING } from "@/lib/service-area-land"; // not service-area: the map doesn't need the legal ring
 
 /**
  * Map of members' landmark cells and the ranked venues.
@@ -33,7 +33,8 @@ const TILES_URL = process.env.NEXT_PUBLIC_TILES_URL || "/tiles/metro-manila.pmti
 
 // Metro Manila plus the 5 km origin buffer; keep in sync with BBOX in scripts/fetch-tiles.ts.
 const TILE_BOUNDS: L.LatLngBoundsExpression = [[14.3, 120.88], [14.83, 121.19]];
-const AREA_LATLNGS = AREA_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
+// Drawn clipped to the coastline; the legal boundary runs out into Manila Bay.
+const AREA_LATLNGS = AREA_LAND_RING.map(([lng, lat]) => [lat, lng] as [number, number]);
 
 /** A design token's current value (light or dark); Leaflet's SVG attributes can't take var(). */
 export const cssVar = (name: string, fallback: string) =>
