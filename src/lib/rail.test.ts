@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridRingUnsafe } from "h3-js";
-import { accessTimes, buildRail, combineRail, lookupWalks, MAX_ACCESS_MIN, railNetwork, railProvider, railWalks, type RailNet } from "./rail.ts";
+import { accessTimes, buildRail, combineRail, lookupWalks, MAX_ACCESS_MIN, railNetwork, railProvider, railWalks, RIDE_WAIT, type RailNet } from "./rail.ts";
 import { loadVenueSnapshot } from "./candidates.ts";
 import { haversineKm } from "./scoring.ts";
 import { estimateProvider, noteOf, withNote } from "./routing.ts";
@@ -149,4 +149,22 @@ test("if driving fails, the search goes on with walks to stations only, and says
   const m = await railProvider(failingDrive).minutes([fairview], [ayala], "RAIL");
   assert.equal(m[0][0], walk[0]); // Fairview is too far to walk to a station, so without a ride it's walking
   assert.equal(noteOf(m), "rail:no-rides");
+});
+
+test("a driving request that hangs is given up after RIDE_WAIT, not the full provider timeout", async () => {
+  const hanging = {
+    ...estimateProvider,
+    minutes: (...a: Parameters<typeof estimateProvider.minutes>) =>
+      a[2] === "DRIVE" ? new Promise<never>(() => {}) : estimateProvider.minutes(...a),
+  };
+  const saved = RIDE_WAIT.ms;
+  RIDE_WAIT.ms = 30;
+  try {
+    const t = Date.now();
+    const m = await railProvider(hanging).minutes([cellCenter("89694ec2967ffff")], [venueByAyala()], "RAIL");
+    assert.ok(Date.now() - t < 2000);
+    assert.equal(noteOf(m), "rail:no-rides");
+  } finally {
+    RIDE_WAIT.ms = saved;
+  }
 });
