@@ -56,7 +56,20 @@ export const RIDE_SEARCH_KM = 12;
  * covers boarding at a (after the wait) to stepping off at b, including run
  * time, transfer walks and the wait for each later train.
  */
-export function buildRail(net: RailNet): { stops: Stop[]; ride: number[][]; rideWait: number } {
+export type RailGraph = {
+  stops: Stop[];
+  /** Minutes from boarding at a (after the wait) to stepping off at b. */
+  ride: number[][];
+  /** First stop after a on the fastest way to b (-1: none), for itineraries. */
+  next: number[][];
+  /** Minutes of each direct hop "a>b": run time, or for a transfer the walk plus the next line's entry and wait. */
+  hop: Map<string, number>;
+  /** Whether the fastest way from a to b rides at least one train. Not when a is b, or for a transfer walk alone. */
+  usesTrain: boolean[][];
+  rideWait: number;
+};
+
+export function buildRail(net: RailNet): RailGraph {
   const stops: Stop[] = [];
   const index = new Map<string, number>();
   const edges: [number, number, number][] = [];
@@ -83,15 +96,32 @@ export function buildRail(net: RailNet): { stops: Stop[]; ride: number[][]; ride
   // Floyd–Warshall: about 50 stops, so 125,000 steps, once per process.
   const n = stops.length;
   const ride = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 0 : Infinity)));
-  for (const [a, b, m] of edges) ride[a][b] = Math.min(ride[a][b], m);
+  const next = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? i : -1)));
+  const hop = new Map<string, number>();
+  for (const [a, b, m] of edges) {
+    if (m < ride[a][b]) {
+      ride[a][b] = m;
+      next[a][b] = b;
+      hop.set(`${a}>${b}`, m);
+    }
+  }
   for (let k = 0; k < n; k++) {
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        if (ride[i][k] + ride[k][j] < ride[i][j]) ride[i][j] = ride[i][k] + ride[k][j];
+        if (ride[i][k] + ride[k][j] < ride[i][j]) {
+          ride[i][j] = ride[i][k] + ride[k][j];
+          next[i][j] = next[i][k];
+        }
       }
     }
   }
-  return { stops, ride, rideWait: net.rideWaitMin ?? 0 };
+  const usesTrain = stops.map((_, a) =>
+    stops.map((_, b) => {
+      const path = railPath(next, a, b);
+      return path.some((p, k) => k > 0 && stops[path[k - 1]].line === stops[p].line);
+    }),
+  );
+  return { stops, ride, next, hop, usesTrain, rideWait: net.rideWaitMin ?? 0 };
 }
 
 /**
@@ -106,21 +136,26 @@ export function accessTimes(
   drive: CostMatrix,
   rideStops: number[],
   rideWait: number,
-): { board: number[]; access: CostMatrix } {
+): { board: number[]; access: CostMatrix; how: ("walk" | "ride" | null)[][] } {
   const board = [...new Set([...walkStops, ...rideStops])];
   const within = (cap: number) => (m: number | null | undefined): m is number => m != null && Number.isFinite(m) && m <= cap;
   const walkOk = within(MAX_ACCESS_MIN);
   const rideOk = within(MAX_RIDE_MIN);
-  const access = walk.map((_, i) =>
-    board.map((s) => {
+  const how: ("walk" | "ride" | null)[][] = [];
+  const access = walk.map((_, i) => {
+    how[i] = [];
+    return board.map((s, bi) => {
       const w = walk[i]?.[walkStops.indexOf(s)];
       const d = drive[i]?.[rideStops.indexOf(s)];
       const r = d == null ? null : d + rideWait;
-      const best = Math.min(walkOk(w) ? w : Infinity, rideOk(r) ? r : Infinity);
+      const byWalk = walkOk(w) ? w : Infinity;
+      const byRide = rideOk(r) ? r : Infinity;
+      const best = Math.min(byWalk, byRide);
+      how[i][bi] = !Number.isFinite(best) ? null : byWalk <= byRide ? "walk" : "ride";
       return Number.isFinite(best) ? best : null;
-    }),
-  );
-  return { board, access };
+    });
+  });
+  return { board, access, how };
 }
 
 /**
@@ -137,19 +172,32 @@ export function combineRail(
   alight: number[],
   stops: Stop[],
   ride: number[][],
+  /**
+   * If given, only pairs that ride a train count (RailGraph.usesTrain). Without
+   * it, a ride to a station next to the venue counted as a train trip: a car
+   * trip plus the minutes for getting into a station, with no train at all.
+   */
+  usesTrain?: boolean[][],
+  /** If given, filled with the boarding and alighting indices (into board/alight) behind each time; null = walk all the way. */
+  picks?: ({ bi: number; ai: number } | null)[][],
 ): CostMatrix {
   const ok = (m: number | null | undefined): m is number => m != null && Number.isFinite(m) && m <= MAX_ACCESS_MIN;
   return walkOV.map((row, i) =>
     row.map((walk, j) => {
       let best = walk ?? Infinity;
+      if (picks) (picks[i] ??= [])[j] = null;
       board.forEach((b, bi) => {
         const toStation = walkOB[i]?.[bi]; // capped by accessTimes
         if (toStation == null || !Number.isFinite(toStation)) return;
         alight.forEach((a, ai) => {
+          if (usesTrain && !usesTrain[b][a]) return;
           const fromStation = walkAV[ai]?.[j];
           if (!ok(fromStation)) return;
           const t = toStation + stops[b].entry + stops[b].wait + ride[b][a] + fromStation;
-          if (t < best) best = t;
+          if (t < best) {
+            best = t;
+            if (picks) picks[i][j] = { bi, ai };
+          }
         });
       });
       return Number.isFinite(best) ? best : null;
@@ -262,16 +310,6 @@ const rideCandidates = (stops: Stop[], pts: LatLng[]) => [
   ),
 ];
 
-/**
- * Wraps a walking (and driving) provider. Two requests per search, in
- * parallel: walking from origins to nearby stations and the venues; driving
- * from origins to their nearest stations (skipped if the provider can't
- * drive). Station to venue comes from the station-walk table.
- *
- * The ride is optional: if the driving request fails, the search goes on with
- * walks to stations only and the times carry the note "rail:no-rides". On
- * 2026-10-18 one live Train search failed because driving didn't answer in 20 s.
- */
 /** How long a Train search waits for the optional ride leg (driving answers in about 1 s when it works). */
 export const RIDE_WAIT = { ms: 8000 };
 
@@ -286,7 +324,14 @@ async function optionalRides(drive: Promise<CostMatrix>): Promise<CostMatrix | n
   try {
     return await Promise.race([
       // Our provider errors are short ("ORS 503"); anything else (a JSON parse error quotes the body) gets its name only.
-      drive.catch((e: Error) => giveUp(e.name === "TimeoutError" ? "timeout" : /^(ORS|Routes API) \d+$/.test(e.message) ? e.message : e.name)),
+      drive.catch((e: Error) =>
+        giveUp(
+          e.name === "TimeoutError" ? "timeout"
+          : e.name === "TypeError" && /fetch failed/i.test(e.message) ? "network error"
+          : /^(ORS|Routes API) \d+$/.test(e.message) ? e.message
+          : e.name,
+        ),
+      ),
       late,
     ]);
   } finally {
@@ -294,12 +339,90 @@ async function optionalRides(drive: Promise<CostMatrix>): Promise<CostMatrix | n
   }
 }
 
+/** One leg of a member's train trip. Minutes add up to the trip's total. */
+export type Leg =
+  | { kind: "walk"; min: number; to?: string } // to a station, or (no `to`) to the venue
+  | { kind: "ride"; min: number; to: string } // car, taxi or tricycle to a station, including getting one
+  | { kind: "train"; line: string; from: string; to: string; min: number } // including the wait and getting in
+  | { kind: "transfer"; to: string; min: number }; // walk between lines
+
+/** What railProvider decided for each member and destination, kept beside the matrix for itineraries. */
+type Trips = {
+  graph: RailGraph;
+  walkOV: CostMatrix;
+  board: number[];
+  access: CostMatrix;
+  how: ("walk" | "ride" | null)[][];
+  alight: number[];
+  walkAV: CostMatrix;
+  picks: ({ bi: number; ai: number } | null)[][];
+};
+const trips = new WeakMap<CostMatrix, Trips>();
+
+const label = (s: Stop) => `${s.name} (${s.line})`;
+
+/** Pure: the stops from a to b on the fastest way, both ends included. */
+export function railPath(next: number[][], a: number, b: number): number[] {
+  if (next[a][b] < 0) return [];
+  const path = [a];
+  for (let at = a; at !== b; ) path.push((at = next[at][b]));
+  return path;
+}
+
+/**
+ * Member i's trip to destination j, from a matrix railProvider returned; null
+ * if it didn't come from railProvider or there's no trip. Single-phone planner
+ * only: in a group, the stations would hint at where someone starts.
+ */
+export function itinerary(matrix: CostMatrix, i: number, j: number): Leg[] | null {
+  const t = trips.get(matrix);
+  const total = matrix[i]?.[j];
+  if (!t || total == null) return null;
+  const pick = t.picks[i]?.[j];
+  if (!pick) return [{ kind: "walk", min: total }];
+  const { stops, next, hop } = t.graph;
+  const b = t.board[pick.bi];
+  const a = t.alight[pick.ai];
+  const legs: Leg[] = [{ kind: t.how[i][pick.bi] === "ride" ? "ride" : "walk", min: t.access[i][pick.bi]!, to: label(stops[b]) }];
+  const path = railPath(next, b, a);
+  let from = b;
+  let run = stops[b].entry + stops[b].wait;
+  for (let k = 1; k < path.length; k++) {
+    const [p, q] = [path[k - 1], path[k]];
+    const m = hop.get(`${p}>${q}`)!;
+    if (stops[p].line === stops[q].line) {
+      run += m;
+      continue;
+    }
+    // A transfer: close the train leg, walk across, and the next leg starts with the new line's entry and wait.
+    legs.push({ kind: "train", line: stops[p].line, from: label(stops[from]), to: label(stops[p]), min: run });
+    const across = stops[q].entry + stops[q].wait;
+    legs.push({ kind: "transfer", to: label(stops[q]), min: m - across });
+    from = q;
+    run = across;
+  }
+  legs.push({ kind: "train", line: stops[a].line, from: label(stops[from]), to: label(stops[a]), min: run });
+  legs.push({ kind: "walk", min: t.walkAV[pick.ai][j]! });
+  return legs;
+}
+
+/**
+ * Wraps a walking (and driving) provider. Two requests per search, in
+ * parallel: walking from origins to nearby stations and the venues; driving
+ * from origins to their nearest stations (skipped if the provider can't
+ * drive). Station to venue comes from the station-walk table.
+ *
+ * The ride is optional: if the driving request fails, the search goes on with
+ * walks to stations only and the times carry the note "rail:no-rides". On
+ * 2026-10-18 one live Train search failed because driving didn't answer in 20 s.
+ */
 export function railProvider(base: MatrixProvider): MatrixProvider {
   return {
     name: `rail+${base.name}`,
     supports: ["RAIL"] as TravelMode[],
     async minutes(origins, destinations) {
-      const { stops, ride, rideWait } = railNetwork();
+      const graph = railNetwork();
+      const { stops, ride, rideWait } = graph;
       const walkStops = near(stops, origins);
       let rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
       const { alight, walkAV } = lookupWalks(railWalks(stops), destinations);
@@ -312,10 +435,13 @@ export function railProvider(base: MatrixProvider): MatrixProvider {
       if (noRides) rideStops = [];
       const walkOB = first.map((row) => row.slice(0, walkStops.length));
       const walkOV = first.map((row) => row.slice(walkStops.length));
-      const { board, access } = accessTimes(walkOB, walkStops, drive ?? [], rideStops, rideWait);
+      const { board, access, how } = accessTimes(walkOB, walkStops, drive ?? [], rideStops, rideWait);
       // Keep the walking provider's note ("walk:foot-hiking") on the combined times, plus our own.
       const notes = [noteOf(first), noRides ? "rail:no-rides" : undefined].filter(Boolean).join("|");
-      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), notes || undefined);
+      const picks: ({ bi: number; ai: number } | null)[][] = [];
+      const result = combineRail(walkOV, access, walkAV, board, alight, stops, ride, graph.usesTrain, picks);
+      trips.set(result, { graph, walkOV, board, access, how, alight, walkAV, picks });
+      return withNote(result, notes || undefined);
     },
   };
 }

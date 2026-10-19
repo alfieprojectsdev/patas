@@ -1,5 +1,6 @@
 "use client";
 
+import type { Leg } from "@/lib/rail";
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { rushHourRange, showsRushHour } from "@/lib/traffic";
@@ -23,7 +24,8 @@ export type Result = {
   worst: number;
   spread: number;
   total: number;
-  perMember: { memberId: string; minutes: number }[];
+  /** `trip`: Train mode on the single-phone planner only (see MeetOptions.itineraries). */
+  perMember: { memberId: string; minutes: number; trip?: Leg[] }[];
 };
 /** "Our usual spot" as /api/meet returns it: its result and rank, or a note that someone can't reach it. */
 export type UsualResult = (Result & { rank: number; of: number }) | { venueId: string; name: string; unreachable: true };
@@ -60,6 +62,27 @@ const hikingNote = (source: string) =>
       5 km/h on the same footpaths.
     </p>
   );
+
+/** "walk 6 min to Katipunan (LRT-2) · LRT-2 to Araneta Center-Cubao (LRT-2), 12 min · …". Train minutes include the wait. */
+export function tripText(legs: Leg[]): string {
+  if (legs.length === 1 && legs[0].kind === "walk" && !legs[0].to) return `walk all the way, ${legs[0].min} min`;
+  return legs
+    .map((l) => {
+      switch (l.kind) {
+        case "walk":
+          // A landmark that is the station itself rounds to 0 min.
+          if (l.to && l.min < 1) return `start at ${l.to}`;
+          return l.to ? `walk ${l.min} min to ${l.to}` : `walk ${l.min} min`;
+        case "ride":
+          return `car, taxi or tricycle ${l.min} min to ${l.to}`;
+        case "train":
+          return `${l.line} to ${l.to.replace(` (${l.line})`, "")}, ${l.min} min with the wait`;
+        case "transfer":
+          return `walk ${l.min} min to ${l.to}`;
+      }
+    })
+    .join(" · ");
+}
 
 function Caveat({ source, rush }: { source: string; rush: boolean }) {
   if (source.includes("straight-line-estimate")) {
@@ -295,6 +318,24 @@ export function ResultsList({
                       );
                     })}
                   </ul>
+                  {r.perMember.some((p) => p.trip?.some((l) => l.kind === "train")) && (
+                    <div className="routes">
+                      <p className="routes-title">How each person gets there</p>
+                      <ul>
+                        {r.perMember.map((p) => {
+                          const m = memberOf(p.memberId);
+                          return (
+                            p.trip && (
+                              <li key={p.memberId}>
+                                <MemberHex c={m.c} label={m.initial} size="sm" />
+                                <span>{tripText(p.trip)}</span>
+                              </li>
+                            )
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
                   <div className="card-foot">
                     <span>
                       Gap, longest to shortest: <b>{r.spread} min</b>

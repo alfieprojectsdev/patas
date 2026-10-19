@@ -487,3 +487,9 @@ footer > a, footer > .link { min-height: var(--tap); display: inline-flex; align
 main.wide > .planner { max-width: 640px; margin: 0 auto; }
 .member.solo { grid-template-areas: "hex nick nick" "lm lm lm"; }
 @media (min-width: 900px) { .member.solo { grid-template-areas: "hex nick lm lm"; } }
+
+/* Train itineraries in the open result (single-phone planner only). */
+.routes { margin-top: 14px; font-size: 0.9rem; color: var(--muted); }
+.routes-title { margin: 0 0 6px; font-weight: 600; color: var(--text); }
+.routes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.routes li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findCandidates, loadSnapshot } from "./candidates.ts";
 import { getProvider, noteOf } from "./routing.ts";
-import { railNetwork, railProvider, stationVenues } from "./rail.ts";
+import { itinerary, railNetwork, railProvider, stationVenues, type Leg } from "./rail.ts";
 import { rankVenues } from "./scoring.ts";
 import { originInScope, venueInScope } from "./scope.ts";
 import { venueById } from "./venues.ts";
@@ -59,11 +59,28 @@ export function placeUsual(ranked: VenueScore[], usualId: string): { index: numb
  * `later` runs work that shouldn't hold up the response (the failure alert).
  * Routes pass Next's `after`; elsewhere (tests, scripts) the task just starts.
  */
-export type MeetOptions = { later?: (task: () => Promise<unknown>) => void };
+/**
+ * `itineraries`: in Train mode, add each member's route (stations and lines)
+ * to every result. Only the single-phone planner asks for it: there one
+ * person entered every landmark, so nothing new is revealed. Group links
+ * never do, because a boarding station hints at where someone starts.
+ */
+export type MeetOptions = { later?: (task: () => Promise<unknown>) => void; itineraries?: boolean };
+
+/** Pure: whole minutes per leg that add up to the trip's shown total (the longest leg takes the rounding). */
+export function roundLegs(legs: Leg[], total: number): Leg[] {
+  const out = legs.map((l) => ({ ...l, min: Math.round(l.min) }));
+  const off = total - out.reduce((s, l) => s + l.min, 0);
+  if (off && out.length) {
+    const longest = out.reduce((a, l, k) => (l.min > out[a].min ? k : a), 0);
+    out[longest].min += off;
+  }
+  return out;
+}
 
 export async function meet(
   { origins: input, mode, priorBurden, departureTime, usual }: MeetInput,
-  { later = (task) => void task() }: MeetOptions = {},
+  { later = (task) => void task(), itineraries = false }: MeetOptions = {},
 ): Promise<MeetOutcome> {
   const cells = input.map((o) => o.cell);
   if (!cells.every((c) => isValidOriginCell(c))) return { status: 400, body: { error: "invalid cell" } };
@@ -137,7 +154,11 @@ export async function meet(
     worst: Math.round(s.worst),
     spread: Math.round(s.spread),
     total: Math.round(s.total),
-    perMember: origins.map((o, i) => ({ memberId: o.memberId, minutes: Math.round(s.perMember[i]) })),
+    perMember: origins.map((o, i) => {
+      const minutes = Math.round(s.perMember[i]);
+      const legs = itineraries && mode === "RAIL" ? itinerary(matrix, i, venues.indexOf(s.venue)) : null;
+      return { memberId: o.memberId, minutes, ...(legs ? { trip: roundLegs(legs, minutes) } : {}) };
+    }),
   });
   const results = ranked.slice(0, 5).map(toResult);
   if (!usualVenue) return { status: 200, body: { results, source } };

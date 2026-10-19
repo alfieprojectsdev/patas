@@ -13,6 +13,9 @@ export const maxDuration = 30; // routing call has a 20 s timeout
  * Body: { origins: [{memberId, cell} | {memberId, landmark:{lat,lng}}], mode?, priorBurden?, departureTime?, usual? }
  * With `usual` (a venue id from /api/venues), the response adds `usual`: that
  * venue's result plus its rank, even when it isn't in the top five.
+ * In Train mode each member's result also has `trip`, their stations and
+ * lines. Only this route asks for it (one person entered every landmark);
+ * group meet never does, because a station hints at where someone starts.
  *
  * Single-device planner. Preferred: the client sends H3 res-9 `cell`s.
  * `landmark` is accepted for convenience but snapped immediately.
@@ -46,6 +49,6 @@ export async function POST(req: Request) {
     ...parsed.data,
     // Normalise to cells; drop raw coordinates.
     origins: parsed.data.origins.map((o) => ({ memberId: o.memberId, cell: "cell" in o ? o.cell : snapToCell(o.landmark) })),
-  }, { later: after });
+  }, { later: after, itineraries: true }); // single-phone planner: one person entered every landmark
   return NextResponse.json(body, { status });
 }

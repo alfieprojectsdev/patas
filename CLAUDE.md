@@ -72,6 +72,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - Don't log request bodies or upstream error bodies (may contain coords).
 - API responses never include other members' landmarks; host options return
   `location: null`.
+- Train itineraries (stations and lines per member) only from `/api/meet`,
+  the single-phone planner, where one person entered every landmark
+  (`MeetOptions.itineraries`, agreed 2026-10-19). Group meet never asks for
+  them: a boarding station hints at where someone starts.
 - Persist only aliases, venue names, and per-member minutes/pesos. Groups expire.
 
 ## Layout
@@ -153,9 +157,11 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   station-to-venue walk is a lookup in `data/rail-walks.json`
   (`npm run fetch:rail-walks`, ~51 requests; rerun after fetch:rail or
   fetch:venues). Asking for it live was refused by ORS (error 6020, too many
-  visited nodes). Host options aren't in it, so no train to them. Never returns an itinerary
-  (boarding stations would hint at members' areas). In RAIL mode the shortlist
-  also gets venues beside stations (`stationVenues`).
+  visited nodes). Host options aren't in it, so no train to them. A trip must
+  ride a train (`usesTrain`): boarding and leaving at the same station is a car
+  trip, not Train mode. `itinerary(matrix, i, j)` rebuilds a member's legs from
+  the next-hop table (single-phone planner only, see Privacy rules). In RAIL
+  mode the shortlist also gets venues beside stations (`stationVenues`).
 - `src/lib/traffic.ts` — display-only rush-hour range (1.5–2× clear-road ORS
   driving times, from TomTom Metro Manila averages). Never feeds ranking.
 - `src/lib/fares.ts` — stub; LTFRB fare matrices go here.
