@@ -24,7 +24,7 @@
     { "alias": "Kai", "q": "fairview terr", "pick": "Fairview Terraces" },
     { "alias": "Mika", "q": "cubao", "pick": "Cubao station" }
   ],
-  "mode": "Car or ride-hail",
+  "mode": "Car or ride‑hail",
 
   "pacing": {
     "typeDelayMs": 60,
