@@ -71,6 +71,12 @@ function crossing(p: Pt, q: Pt, c: Pt[]): { pos: number; pt: Pt } | null {
   return found && { pos: found.pos, pt: found.pt };
 }
 
+const pointAt = (c: Pt[], pos: number): Pt => {
+  const i = Math.min(Math.floor(pos), c.length - 2);
+  const t = pos - i;
+  return [c[i][0] + t * (c[i + 1][0] - c[i][0]), c[i][1] + t * (c[i + 1][1] - c[i][1])];
+};
+
 const isClosed = (c: Pt[]) => c.length > 3 && c[0][0] === c.at(-1)![0] && c[0][1] === c.at(-1)![1];
 
 /**
@@ -87,9 +93,14 @@ function between(c: Pt[], from: number, to: number): Pt[] {
   }
   const n = c.length - 1; // the last point repeats the first
   const ahead = (to - from + n) % n;
-  if (ahead <= n / 2) for (let v = Math.floor(from) + 1; v < from + ahead; v++) out.push(c[v % n]);
-  else for (let v = Math.ceil(from) - 1; v > from - (n - ahead); v--) out.push(c[((v % n) + n) % n]);
-  return out;
+  const forward: Pt[] = [];
+  for (let v = Math.floor(from) + 1; v < from + ahead; v++) forward.push(c[v % n]);
+  const back: Pt[] = [];
+  for (let v = Math.ceil(from) - 1; v > from - (n - ahead); v--) back.push(c[((v % n) + n) % n]);
+  // Shorter by length, not by point count: mappers add points unevenly along a shore.
+  const length = (pts: Pt[]) => pts.reduce((s, p, i) => (i ? s + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0), 0);
+  const ends = (pts: Pt[]) => [pointAt(c, from), ...pts, pointAt(c, to)];
+  return length(ends(forward)) <= length(ends(back)) ? forward : back;
 }
 
 /** Pure: a water body's outer ring turned so the water is on its right, like a coastline. */

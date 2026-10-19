@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { leafletLayer } from "protomaps-leaflet";
-import { AREA_LAND_RING } from "@/lib/service-area";
+import { AREA_LAND_RING } from "@/lib/service-area-land"; // not service-area: the map doesn't need the legal ring
 
 /**
  * Map of members' landmark cells and the ranked venues.

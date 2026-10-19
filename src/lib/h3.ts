@@ -1,6 +1,6 @@
 import { cellToBoundary, cellToLatLng, isValidCell, latLngToCell, getResolution, polygonToCells } from "h3-js";
 import type { LatLng } from "./types";
-import { AREA_LAND_RING } from "./service-area.ts";
+import { AREA_LAND_RING } from "./service-area-land.ts";
 
 /**
  * H3 snapping — privacy quantization + precompute key.
