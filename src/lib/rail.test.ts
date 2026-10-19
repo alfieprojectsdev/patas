@@ -134,3 +134,19 @@ test("a walking provider's note (e.g. the foot-hiking fallback) stays on train t
   const m = await railProvider(noted).minutes([cellCenter("89694ec2967ffff")], [venueByAyala()], "RAIL");
   assert.equal(noteOf(m), "walk:foot-hiking");
 });
+
+test("if driving fails, the search goes on with walks to stations only, and says so", async () => {
+  const failingDrive = {
+    ...estimateProvider,
+    minutes: async (...a: Parameters<typeof estimateProvider.minutes>) => {
+      if (a[2] === "DRIVE") throw new Error("ORS 503");
+      return estimateProvider.minutes(...a);
+    },
+  };
+  const fairview = cellCenter(snapToCell({ lat: 14.7353, lng: 121.0598 }));
+  const ayala = venueByAyala();
+  const [walk] = await estimateProvider.minutes([fairview], [ayala], "WALK");
+  const m = await railProvider(failingDrive).minutes([fairview], [ayala], "RAIL");
+  assert.equal(m[0][0], walk[0]); // Fairview is too far to walk to a station, so without a ride it's walking
+  assert.equal(noteOf(m), "rail:no-rides");
+});

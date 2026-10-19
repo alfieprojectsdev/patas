@@ -267,6 +267,10 @@ const rideCandidates = (stops: Stop[], pts: LatLng[]) => [
  * parallel: walking from origins to nearby stations and the venues; driving
  * from origins to their nearest stations (skipped if the provider can't
  * drive). Station to venue comes from the station-walk table.
+ *
+ * The ride is optional: if the driving request fails, the search goes on with
+ * walks to stations only and the times carry the note "rail:no-rides". On
+ * 2026-10-18 one live Train search failed because driving didn't answer in 20 s.
  */
 export function railProvider(base: MatrixProvider): MatrixProvider {
   return {
@@ -275,18 +279,26 @@ export function railProvider(base: MatrixProvider): MatrixProvider {
     async minutes(origins, destinations) {
       const { stops, ride, rideWait } = railNetwork();
       const walkStops = near(stops, origins);
-      const rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
+      let rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
       const { alight, walkAV } = lookupWalks(railWalks(stops), destinations);
       const pts = (ix: number[]) => ix.map((i) => stops[i].point);
       const [first, drive] = await Promise.all([
         base.minutes(origins, [...pts(walkStops), ...destinations], "WALK"),
-        rideStops.length ? base.minutes(origins, pts(rideStops), "DRIVE") : Promise.resolve([] as CostMatrix),
+        rideStops.length
+          ? base.minutes(origins, pts(rideStops), "DRIVE").catch((e: Error) => {
+              console.error(`rail: driving to stations failed (${e.name === "TimeoutError" ? "timeout" : e.message}); walking to stations only`);
+              return null;
+            })
+          : Promise.resolve([] as CostMatrix),
       ]);
+      const noRides = drive === null;
+      if (noRides) rideStops = [];
       const walkOB = first.map((row) => row.slice(0, walkStops.length));
       const walkOV = first.map((row) => row.slice(walkStops.length));
-      const { board, access } = accessTimes(walkOB, walkStops, drive, rideStops, rideWait);
-      // Keep the walking provider's note ("walk:foot-hiking") on the combined times.
-      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first));
+      const { board, access } = accessTimes(walkOB, walkStops, drive ?? [], rideStops, rideWait);
+      // Keep the walking provider's note ("walk:foot-hiking") on the combined times, plus our own.
+      const notes = [noteOf(first), noRides ? "rail:no-rides" : undefined].filter(Boolean).join("|");
+      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), notes || undefined);
     },
   };
 }
