@@ -6,7 +6,7 @@ import { loadVenueSnapshot } from "./candidates.ts";
 import { haversineKm } from "./scoring.ts";
 import { estimateProvider, noteOf, withNote } from "./routing.ts";
 import { cellCenter, snapToCell } from "./h3.ts";
-import { meet } from "./meet.ts";
+import { meet, roundLegs } from "./meet.ts";
 
 // A toy network: line A runs west to east over three stops, line B leaves A's middle stop.
 const C0 = "89694ec2bd7ffff"; // Cubao station
@@ -218,4 +218,17 @@ test("a trip has to ride a train: boarding and leaving at the same station, or o
   // Getting to a1 is 5 min and the venue is 3 min from a1: without the rule that "train trip" (5 + wait + 0 + 3) beat a 20 min walk.
   const out = combineRail([[20]], [[5]], [[3]], [0], [0], stops, ride, usesTrain);
   assert.equal(out[0][0], 20);
+});
+
+test("a ride to the station shows as a ride, and shown minutes add up to the shown total", async () => {
+  const fairview = cellCenter(snapToCell({ lat: 14.7353, lng: 121.0598 }));
+  const m = await railProvider(estimateProvider).minutes([fairview], [venueByAyala()], "RAIL");
+  const legs = itinerary(m, 0, 0)!;
+  assert.equal(legs[0].kind, "ride");
+  assert.ok(Math.abs(legs.reduce((s, l) => s + l.min, 0) - m[0][0]!) < 1e-6);
+  const shown = Math.round(m[0][0]!);
+  assert.equal(roundLegs(legs, shown).reduce((s, l) => s + l.min, 0), shown);
+  // Three legs of 6.4 min round to 18; the total of 19.2 rounds to 19, and the longest leg takes the difference.
+  const odd = roundLegs([{ kind: "walk", min: 6.4, to: "x" }, { kind: "train", line: "L", from: "a", to: "b", min: 6.4 }, { kind: "walk", min: 6.4 }], 19);
+  assert.equal(odd.reduce((s, l) => s + l.min, 0), 19);
 });

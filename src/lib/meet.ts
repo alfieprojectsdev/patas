@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findCandidates, loadSnapshot } from "./candidates.ts";
 import { getProvider, noteOf } from "./routing.ts";
-import { itinerary, railNetwork, railProvider, stationVenues } from "./rail.ts";
+import { itinerary, railNetwork, railProvider, stationVenues, type Leg } from "./rail.ts";
 import { rankVenues } from "./scoring.ts";
 import { originInScope, venueInScope } from "./scope.ts";
 import { venueById } from "./venues.ts";
@@ -66,6 +66,17 @@ export function placeUsual(ranked: VenueScore[], usualId: string): { index: numb
  * never do, because a boarding station hints at where someone starts.
  */
 export type MeetOptions = { later?: (task: () => Promise<unknown>) => void; itineraries?: boolean };
+
+/** Pure: whole minutes per leg that add up to the trip's shown total (the longest leg takes the rounding). */
+export function roundLegs(legs: Leg[], total: number): Leg[] {
+  const out = legs.map((l) => ({ ...l, min: Math.round(l.min) }));
+  const off = total - out.reduce((s, l) => s + l.min, 0);
+  if (off && out.length) {
+    const longest = out.reduce((a, l, k) => (l.min > out[a].min ? k : a), 0);
+    out[longest].min += off;
+  }
+  return out;
+}
 
 export async function meet(
   { origins: input, mode, priorBurden, departureTime, usual }: MeetInput,
@@ -144,12 +155,9 @@ export async function meet(
     spread: Math.round(s.spread),
     total: Math.round(s.total),
     perMember: origins.map((o, i) => {
+      const minutes = Math.round(s.perMember[i]);
       const legs = itineraries && mode === "RAIL" ? itinerary(matrix, i, venues.indexOf(s.venue)) : null;
-      return {
-        memberId: o.memberId,
-        minutes: Math.round(s.perMember[i]),
-        ...(legs ? { trip: legs.map((l) => ({ ...l, min: Math.round(l.min) })) } : {}),
-      };
+      return { memberId: o.memberId, minutes, ...(legs ? { trip: roundLegs(legs, minutes) } : {}) };
     }),
   });
   const results = ranked.slice(0, 5).map(toResult);
