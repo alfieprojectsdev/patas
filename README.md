@@ -158,7 +158,7 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 | `npm run fetch:cities` | Rebuild `data/mm-cities.json`, the 17 city outlines used to label landmarks with their city (snapshot scripts only; the app doesn't ship it) |
 | `npm run fetch:boundary` | Regenerate the Metro Manila boundary: the legal outline, which decides who's in scope, and a copy clipped to the Manila Bay coast and the Laguna de Bay shore, for the map and precompute (one Overpass and two Nominatim requests) |
 | `npm run fetch:rail` | Rebuild `data/rail.json`: station positions from OpenStreetMap for the lines in `data/rail-lines.json` |
-| `npm run fetch:rail-walks` | Rebuild `data/rail-walks.json`, walking times from each station to every venue within 2.5 km (51 openrouteservice requests; needs `ORS_API_KEY`). Rerun after `fetch:rail` or `fetch:venues` |
+| `npm run fetch:rail-walks` | Rebuild `data/rail-walks.json`, walking times from each station to every venue within 2.5 km (51 openrouteservice requests; reads `ORS_API_KEY` from `.env.local`, which must exist). Rerun after `fetch:rail` or `fetch:venues` |
 | `npm run fetch:tiles` | Cut the Metro Manila basemap into `public/tiles/` |
 | `npm run icons` | Render the app icons in `public/icons/` from `icon.svg` |
 | `npm run screenshots` | Regenerate the images in this README against a production build (see the script header) |
