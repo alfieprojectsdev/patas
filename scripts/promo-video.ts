@@ -63,6 +63,7 @@ type Storyboard = {
     frame: { x: number; y: number; width: number; radius: number };
   };
   group: Member[];
+  /** The mode radio's value (DRIVE, WALK, RAIL), not its label: labels change wording, values don't. */
   mode: string;
   pacing: {
     typeDelayMs: number; beforeStartMs: number; afterPickMs: number;
@@ -562,7 +563,7 @@ const FLOWS: Record<Flow, (c: Ctx) => Promise<void>> = {
       await name.pressSequentially(m.alias, { delay: Math.round(p.typeDelayMs * 0.6) });
       await typeLandmark(c, page.locator("li.member").nth(i).getByRole("combobox"), m);
     }
-    const mode = page.locator(".segmented label", { hasText: sb.mode });
+    const mode = page.locator(".segmented label").filter({ has: page.locator(`input[value="${sb.mode}"]`) });
     await bring(mode);
     await mode.click();
     await wait(400);
