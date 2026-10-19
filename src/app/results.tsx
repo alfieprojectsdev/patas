@@ -85,6 +85,9 @@ function Caveat({ source, rush }: { source: string; rush: boolean }) {
           clear-road driving plus 5 minutes to get one, so at rush hour it takes longer.
         </p>
         {hikingNote(source)}
+        {source.includes("rail:no-rides") && (
+          <p>Driving times didn't come through, so these assume everyone walks to a station. Anyone far from a line may do better with a ride.</p>
+        )}
         {source.includes("openrouteservice") && <p className="credit">Walking and driving: {ORS_CREDIT}</p>}
       </div>
     );

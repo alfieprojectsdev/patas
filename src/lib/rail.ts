@@ -267,7 +267,33 @@ const rideCandidates = (stops: Stop[], pts: LatLng[]) => [
  * parallel: walking from origins to nearby stations and the venues; driving
  * from origins to their nearest stations (skipped if the provider can't
  * drive). Station to venue comes from the station-walk table.
+ *
+ * The ride is optional: if the driving request fails, the search goes on with
+ * walks to stations only and the times carry the note "rail:no-rides". On
+ * 2026-10-18 one live Train search failed because driving didn't answer in 20 s.
  */
+/** How long a Train search waits for the optional ride leg (driving answers in about 1 s when it works). */
+export const RIDE_WAIT = { ms: 8000 };
+
+/** The ride leg, or null if driving fails or takes longer than RIDE_WAIT. Logs a label only, never the error text. */
+async function optionalRides(drive: Promise<CostMatrix>): Promise<CostMatrix | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const giveUp = (why: string) => {
+    console.error(`rail: driving to stations failed (${why}); walking to stations only`);
+    return null;
+  };
+  const late = new Promise<null>((resolve) => (timer = setTimeout(() => resolve(giveUp(`no answer in ${RIDE_WAIT.ms} ms`)), RIDE_WAIT.ms)));
+  try {
+    return await Promise.race([
+      // Our provider errors are short ("ORS 503"); anything else (a JSON parse error quotes the body) gets its name only.
+      drive.catch((e: Error) => giveUp(e.name === "TimeoutError" ? "timeout" : /^(ORS|Routes API) \d+$/.test(e.message) ? e.message : e.name)),
+      late,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function railProvider(base: MatrixProvider): MatrixProvider {
   return {
     name: `rail+${base.name}`,
@@ -275,18 +301,21 @@ export function railProvider(base: MatrixProvider): MatrixProvider {
     async minutes(origins, destinations) {
       const { stops, ride, rideWait } = railNetwork();
       const walkStops = near(stops, origins);
-      const rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
+      let rideStops = base.supports.includes("DRIVE") ? rideCandidates(stops, origins) : [];
       const { alight, walkAV } = lookupWalks(railWalks(stops), destinations);
       const pts = (ix: number[]) => ix.map((i) => stops[i].point);
       const [first, drive] = await Promise.all([
         base.minutes(origins, [...pts(walkStops), ...destinations], "WALK"),
-        rideStops.length ? base.minutes(origins, pts(rideStops), "DRIVE") : Promise.resolve([] as CostMatrix),
+        rideStops.length ? optionalRides(base.minutes(origins, pts(rideStops), "DRIVE")) : Promise.resolve([] as CostMatrix),
       ]);
+      const noRides = drive === null;
+      if (noRides) rideStops = [];
       const walkOB = first.map((row) => row.slice(0, walkStops.length));
       const walkOV = first.map((row) => row.slice(walkStops.length));
-      const { board, access } = accessTimes(walkOB, walkStops, drive, rideStops, rideWait);
-      // Keep the walking provider's note ("walk:foot-hiking") on the combined times.
-      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), noteOf(first));
+      const { board, access } = accessTimes(walkOB, walkStops, drive ?? [], rideStops, rideWait);
+      // Keep the walking provider's note ("walk:foot-hiking") on the combined times, plus our own.
+      const notes = [noteOf(first), noRides ? "rail:no-rides" : undefined].filter(Boolean).join("|");
+      return withNote(combineRail(walkOV, access, walkAV, board, alight, stops, ride), notes || undefined);
     },
   };
 }
