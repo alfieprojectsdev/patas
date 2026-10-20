@@ -140,6 +140,8 @@ Set these on the host, since `.env.local` isn't deployed:
 | `FEEDBACK_WEBHOOK_URL` | Optional: a Discord webhook pinged for each feedback message |
 | `ALERT_WEBHOOK_URL` | Optional: a Discord webhook told when searches fail upstream (e.g. openrouteservice timing out), at most once per provider and mode per hour. Unset = `FEEDBACK_WEBHOOK_URL` |
 | `NEXT_PUBLIC_TILES_URL` | Optional: serve the map file from object storage instead |
+| `ROUTING_PROVIDER` | Optional: `ors` (default), `osrm`, `google`, or `estimate` (fake straight-line times, development only) |
+| `OSRM_DRIVE_URL`, `OSRM_WALK_URL` | With `ROUTING_PROVIDER=osrm`: your own OSRM servers, one per profile ([docs/osrm.md](docs/osrm.md)) |
 
 Apply new migrations to the database (`npm run db:migrate` with the direct connection string) before merging the code that needs them, because the merge deploys straight away. Without a database, the single-phone planner still works; group links and feedback say they're unavailable.
 
@@ -149,7 +151,7 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (scoring, scope, H3, landmark and venue search, OSM parsing, rush-hour ranges, the Train model, coastline clipping, the walking fallback, failure alerts, and group links and feedback against PGlite) |
+| `npm test` | Unit tests (scoring, scope, H3, landmark and venue search, OSM parsing, rush-hour ranges, the Train model, the Food only filter, coastline clipping, the walking fallback, the OSRM provider, resumable precompute, failure alerts, and group links and feedback against PGlite) |
 | `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
 | `npm run db:purge` | Delete expired encrypted cells, groups and old feedback (the app also does this as it runs) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
@@ -162,6 +164,8 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 | `npm run fetch:tiles` | Cut the Metro Manila basemap into `public/tiles/` |
 | `npm run icons` | Render the app icons in `public/icons/` from `icon.svg` |
 | `npm run screenshots` | Regenerate the images in this README against a production build (see the script header) |
+| `npm run promo` | Build the 30s and 60s promo videos from the live site (needs ffmpeg and an installed Chrome or Edge; see the header of `scripts/promo-video.ts`) |
+| `node --experimental-strip-types scripts/precompute.ts …` | Build a precomputed travel-time table for every Metro Manila cell and a venue list. Resumable. Meant to run against a local OSRM server: see [docs/osrm.md](docs/osrm.md) |
 
 ## Status
 

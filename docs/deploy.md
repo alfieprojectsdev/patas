@@ -48,7 +48,7 @@ npx neonctl@latest auth
    ```bash
    U="$(npx neonctl@latest connection-string --project-id <id>)" && [ -n "$U" ] && DATABASE_URL="$U" npm run db:migrate
    ```
-   Expected output: a `database:` line naming the Neon host, then `applied: 0001_init.sql, 0002_group_links.sql`. If it says `local PGlite`, the connection string wasn't fetched; run it again. (`db.ts` refuses an empty `DATABASE_URL` rather than quietly using the local database.)
+   Expected output: a `database:` line naming the Neon host, then `applied: 0001_init.sql, 0002_group_links.sql, 0003_feedback.sql` (more as migrations are added). If it says `local PGlite`, the connection string wasn't fetched; run it again. (`db.ts` refuses an empty `DATABASE_URL` rather than quietly using the local database.)
 3. Create the Vercel project and set production variables. Values are piped in, so they never appear on screen:
    ```bash
    vercel link --yes --project patas
@@ -59,7 +59,12 @@ npx neonctl@latest auth
    ```bash
    vercel env add NEXT_PUBLIC_CONTACT_EMAIL production --value '<email for questions>' --no-sensitive
    ```
-   Don't set `PATAS_LOCAL_DB` or `ROUTING_PROVIDER` in production.
+   Optional: Discord webhooks for feedback and for failed searches (`ALERT_WEBHOOK_URL` falls back to `FEEDBACK_WEBHOOK_URL`):
+   ```bash
+   vercel env add FEEDBACK_WEBHOOK_URL production --sensitive
+   vercel env add ALERT_WEBHOOK_URL production --sensitive
+   ```
+   Don't set `PATAS_LOCAL_DB` in production, and leave `ROUTING_PROVIDER` unset (openrouteservice) unless you run OSRM somewhere Vercel can reach (`docs/osrm.md`).
 4. Deploy:
    ```bash
    vercel deploy --prod
