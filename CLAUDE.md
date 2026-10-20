@@ -38,7 +38,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `src/lib/precomputed.ts` + `scripts/precompute.ts`: offline cell→venue
   tables per (mode, time band). API uses a table if `PRECOMPUTED_DIR` has
   `<mode>_<band>.json`, else falls back to live routing. Response `source`
-  says which.
+  says which. The loop is `src/lib/precompute-run.ts`: resumable, progress in
+  `<out>.partial.json`, rerun the same command to carry on. Build with a local
+  OSRM (`docs/osrm.md`, `ROUTING_PROVIDER=osrm`): no quota, free-flow like ORS,
+  so one table serves every band.
 - Budget first: `--dry-run` prints elements/requests. Metro Manila clipped to
   land gives 5,664 cells. Check provider quotas before a full run.
 - Tables cover service-area cells only; if any origin cell is missing (buffer-zone
@@ -83,7 +86,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - `src/lib/routing.ts` — `MatrixProvider` seam. Default `orsProvider`
   (OpenRouteService, OSM data; DRIVE/WALK only: it has no motorcycle profile,
   and faking one with car times was removed;
-  no TRANSIT, no traffic). `googleProvider` fallback. `ROUTING_PROVIDER` env.
+  no TRANSIT, no traffic). `googleProvider` fallback. `osrmProvider`
+  (self-hosted OSRM table service; `OSRM_DRIVE_URL` / `OSRM_WALK_URL`, one
+  osrm-routed per profile; a mode without a URL isn't supported).
+  `ROUTING_PROVIDER` env.
 - `src/lib/candidates.ts` — candidates from `data/mm-venues.json` (OSM
   snapshot, default; no network call) or live Overpass / Google Places.
   `CANDIDATE_SOURCE` env. Shortlist = one venue per H3 cell (best category),
