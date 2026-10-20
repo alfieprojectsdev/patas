@@ -25,6 +25,7 @@
     { "alias": "Mika", "q": "cubao", "pick": "Cubao station" }
   ],
   "mode": "DRIVE",
+  "foodOnly": true,
 
   "pacing": {
     "typeDelayMs": 60,
@@ -49,7 +50,8 @@
       "type": "demo",
       "flow": "planner",
       "captions": [
-        { "from": "start", "to": "find", "title": "Add where each friend starts", "sub": "Public landmarks only, never a home address" },
+        { "from": "start", "to": "food", "title": "Add where each friend starts", "sub": "Public landmarks only, never a home address" },
+        { "from": "food", "to": "find", "title": "Meeting over a meal?", "sub": "Tick Food only: cafés, restaurants and fast food", "onlyIf": "foodOnly" },
         { "from": "find", "to": "results", "title": "Tap Find fair spots" },
         { "from": "results", "to": "list", "title": "Nobody gets the long trip", "sub": "Spots ranked by the longest trip first" },
         { "from": "list", "to": "end", "title": "Everyone's minutes, side by side" }
