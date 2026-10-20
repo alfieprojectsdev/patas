@@ -15,11 +15,15 @@ CPUs and 7.6 GiB of RAM, Philippines extract of 610,684,141 bytes):
 | osrm-customize | 1 min 14 s, peak ~0.9 GiB | 41 s, peak ~0.8 GiB |
 | Files on disk | 2.5 GB | 2.7 GB |
 
-Extract is the only step near the VM's memory limit; with less than about
-7 GiB for Docker it may be killed. A running osrm-routed uses about 1.2–1.3
+Peaks were sampled from `docker stats` every 2 seconds, so short spikes may
+be higher. Extract is the only step near the VM's memory limit; give Docker
+at least 7 GiB, and more if you can. A running osrm-routed uses about 1.2–1.3
 GiB per profile. A 50 × 150 table request takes about 0.9 s for either
 profile, so a 1,000-venue table (about 800 requests per mode) takes about
-12 minutes.
+12 minutes. Expect some cells to have no route at all: in a 50-cell walking
+test one cell reached none of the 150 venues, most likely water or a
+fishpond. The table stores that as null, which `meet` already treats as
+unreachable.
 
 ## 1. Get the map data
 
