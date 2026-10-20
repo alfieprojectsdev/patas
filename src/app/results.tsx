@@ -162,6 +162,19 @@ export function ModePicker({ mode, onChange }: { mode: Mode; onChange: (m: Mode)
   );
 }
 
+/** "Food only": the shortlist keeps only cafés, restaurants and fast food. */
+export function FoodToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className={`food-toggle${on ? " on" : ""}`}>
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      <span>
+        <b>Food only</b>
+        <small>Cafés, restaurants and fast food, for meeting up over a meal.</small>
+      </span>
+    </label>
+  );
+}
+
 /**
  * The results screen: a top bar to go back and edit, the map with a legend,
  * and the ranked list. On desktop the list sits left and the map sticks right.
@@ -169,6 +182,7 @@ export function ModePicker({ mode, onChange }: { mode: Mode; onChange: (m: Mode)
 export function ResultsScreen({
   title,
   mode,
+  foodOnly = false,
   onEdit,
   mapMembers,
   legend,
@@ -179,6 +193,7 @@ export function ResultsScreen({
 }: {
   title: string;
   mode: Mode;
+  foodOnly?: boolean;
   onEdit: () => void;
   mapMembers: MapMember[];
   legend: { name: string; c: MemberColor; initial: string }[];
@@ -197,7 +212,10 @@ export function ResultsScreen({
         <img className="icon-only" src="/icons/icon.svg" width={26} height={26} alt="" />
         <div className="who">
           <b>{title}</b>
-          <small>{modeLabel(mode)}</small>
+          <small>
+            {modeLabel(mode)}
+            {foodOnly && " · food only"}
+          </small>
         </div>
         <button type="button" className="secondary" onClick={onEdit}>
           <span className="short">Edit</span>

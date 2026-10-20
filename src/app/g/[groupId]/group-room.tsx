@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LandmarkPicker, { type Landmark } from "../../landmark-picker";
-import { ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember, type UsualResult } from "../../results";
+import { FoodToggle, ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember, type UsualResult } from "../../results";
 import { UsualSpotSection, type UsualSpot } from "../../usual-spot-picker";
 import { initialOf, MemberHex, useMemberColors } from "../../member-colors";
 import { useHashParam } from "../../use-hash-param";
@@ -68,6 +68,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
   const [joinError, setJoinError] = useState("");
   const [joining, setJoining] = useState(false);
   const [mode, setMode] = useState<Mode>("DRIVE");
+  const [foodOnly, setFoodOnly] = useState(false);
   const [results, setResults] = useState<Result[] | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [source, setSource] = useState("");
@@ -136,7 +137,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
     setError("");
     setResults(null);
     try {
-      const { res, data } = await post(`/api/groups/${groupId}/meet`, { k, mode, usual: usualSpot?.venueId });
+      const { res, data } = await post(`/api/groups/${groupId}/meet`, { k, mode, usual: usualSpot?.venueId, foodOnly: foodOnly || undefined });
       if (!res.ok) {
         setError(res.status === 502 ? "Couldn't get travel times right now. Try again in a minute." : data.error ?? "Something went wrong.");
         return;
@@ -198,6 +199,7 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
       <ResultsScreen
         title={status.members.filter((m) => m.ready).map((m) => m.alias).join(", ")}
         mode={mode}
+        foodOnly={foodOnly}
         onEdit={() => setShowResults(false)}
         mapMembers={mapMembers}
         legend={mine ? [mine] : []}
@@ -289,6 +291,14 @@ export default function GroupRoom({ groupId }: { groupId: string }) {
         mode={mode}
         onChange={(m) => {
           setMode(m);
+          setResults(null);
+        }}
+      />
+
+      <FoodToggle
+        on={foodOnly}
+        onChange={(on) => {
+          setFoodOnly(on);
           setResults(null);
         }}
       />

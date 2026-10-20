@@ -88,6 +88,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   snapshot, default; no network call) or live Overpass / Google Places.
   `CANDIDATE_SOURCE` env. Shortlist = one venue per H3 cell (best category),
   then smallest straight-line worst-case distance, picks ≥400 m apart.
+  `foodOnly` (the "Food only" toggle, both planner and group link): cafés,
+  restaurants and fast food only (`FOOD_TAGS`), from `loadFoodSnapshot()`,
+  which filters BEFORE the per-cell dedupe (else a mall hides its café).
+  No host options in food-only mode.
 - `src/lib/landmarks.ts` + `POST /api/landmarks` — landmark search over
   `data/mm-landmarks.json` (stations, malls, schools, churches, barangay
   halls, neighbourhoods). Snapshot stores H3 cells, not coordinates. POST so

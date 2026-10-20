@@ -493,3 +493,10 @@ main.wide > .planner { max-width: 640px; margin: 0 auto; }
 .routes-title { margin: 0 0 6px; font-weight: 600; color: var(--text); }
 .routes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .routes li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+
+/* "Food only" (an `on` class, not :has(), see CLAUDE.md). */
+.food-toggle { display: flex; gap: 12px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+.food-toggle.on { border-color: var(--accent); background: var(--accent-soft); }
+.food-toggle input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+.food-toggle span { display: grid; gap: 2px; }
+.food-toggle small { color: var(--muted); font-size: 0.875rem; line-height: 1.4; }
