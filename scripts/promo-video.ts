@@ -43,7 +43,8 @@ import { cellCenter } from "../src/lib/h3.ts";
 
 // ---------- Config ----------
 
-type Caption = { from: string; to: string; title: string; sub?: string };
+/** `onlyIf: "foodOnly"`: shown only when the storyboard's foodOnly is on. */
+type Caption = { from: string; to: string; title: string; sub?: string; onlyIf?: "foodOnly" };
 type CardScene = { type: "card"; seconds: number; title: string; subtitle: string; motif?: "meet" | "link" };
 type CtaScene = { type: "cta"; seconds: number; name: string; tagline: string; url: string; footnote: string };
 /** pickOnMap: in the group flow, the first member finds their landmark with the map instead of typing it. */
@@ -569,10 +570,11 @@ const FLOWS: Record<Flow, (c: Ctx) => Promise<void>> = {
     await bring(mode);
     await mode.click();
     await wait(400);
+    // Marked either way, so captions ending at "food" work with foodOnly off too.
+    rec.mark("food");
     if (sb.foodOnly) {
       const food = page.locator(".food-toggle");
       await bring(food);
-      rec.mark("food");
       await wait(500);
       await food.click();
       await wait(sb.pacing.afterPickMs + 300);
@@ -802,6 +804,7 @@ function compose(cut: string, cardsDir: string, demoDirs: Record<string, string>
       f.push(`[${bg}:v]format=rgba[${L}bg]`, `[${L}bg][${L}dm]overlay=${FRAME.x}:${FRAME.y}:eof_action=repeat[${L}c]`);
       let last = `${L}c`;
       s.captions.forEach((c, i) => {
+        if (c.onlyIf === "foodOnly" && !sb.foodOnly) return;
         if (!(c.from in tl.marks) || !(c.to in tl.marks)) log(`  warning: ${name} caption "${c.title}" uses a mark the ${s.flow} flow doesn't set (${Object.keys(tl.marks).join(", ")})`);
         const a = Math.max(0, tl.marks[c.from] ?? 0);
         const b = Math.min(D, tl.marks[c.to] ?? D);
