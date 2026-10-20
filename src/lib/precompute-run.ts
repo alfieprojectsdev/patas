@@ -6,8 +6,10 @@ import type { TravelMode, Venue } from "./types";
 /**
  * The precompute loop, resumable. scripts/precompute.ts runs it: every cell ×
  * every venue, in blocks of chunkOrigins × chunkDest, one provider request per
- * block. Progress is saved every `saveEvery` blocks and when a request fails,
- * so a crash or a quota cut after hours loses at most `saveEvery` blocks. A
+ * block. Progress is saved every `saveEveryMs` (default a minute) and when a
+ * request fails, so a crash or a quota cut after hours loses about a minute. A
+ * save rewrites the whole matrix (tens of MB at 1,000 venues), so it goes by
+ * time, not by block count: small chunks would otherwise save thousands of times. A
  * rerun with the same inputs carries on from the saved blocks; a rerun with
  * different inputs (cells, venues, mode, provider, chunk sizes) starts over,
  * because the saved blocks wouldn't line up.
@@ -22,7 +24,9 @@ export type RunOptions = {
   chunkOrigins: number;
   chunkDest: number;
   depart?: Date;
-  saveEvery?: number;
+  /** Save at most this often (ms). Default 60 s. */
+  saveEveryMs?: number;
+  now?: () => number;
   sleepMs?: number;
   load: () => Progress | null;
   save: (p: Progress) => void;
@@ -50,7 +54,8 @@ export async function runPrecompute(o: RunOptions): Promise<(number | null)[][]>
 
   const save = () => o.save({ fingerprint: fp, done: [...done], minutes });
   const destPts = o.venues.map((v) => v.location);
-  let unsaved = 0;
+  const now = o.now ?? Date.now;
+  let lastSave = now();
   for (let i0 = 0; i0 < o.cells.length; i0 += o.chunkOrigins) {
     const oPts = o.cells.slice(i0, i0 + o.chunkOrigins).map(cellCenter);
     for (let j0 = 0; j0 < o.venues.length; j0 += o.chunkDest) {
@@ -65,9 +70,9 @@ export async function runPrecompute(o: RunOptions): Promise<(number | null)[][]>
       }
       block.forEach((row, di) => row.forEach((m, dj) => (minutes[i0 + di][j0 + dj] = m)));
       done.add(key);
-      if (++unsaved >= (o.saveEvery ?? 20)) {
+      if (now() - lastSave >= (o.saveEveryMs ?? 60_000)) {
         save();
-        unsaved = 0;
+        lastSave = now();
       }
       if (done.size % 20 === 0) log(`${done.size}/${blocks}`);
       if (o.sleepMs) await new Promise((r) => setTimeout(r, o.sleepMs));

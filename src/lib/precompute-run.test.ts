@@ -25,7 +25,7 @@ function flaky(failOn: number | null) {
 test("a failed request keeps the finished blocks, and the rerun only asks for the rest", async () => {
   let saved: Progress | null = null;
   const store = { load: () => saved, save: (p: Progress) => void (saved = structuredClone(p)) };
-  const base = { cells, venues, mode: "DRIVE" as const, chunkOrigins: 1, chunkDest: 1, saveEvery: 100 };
+  const base = { cells, venues, mode: "DRIVE" as const, chunkOrigins: 1, chunkDest: 1, saveEveryMs: 3_600_000 };
 
   const first = flaky(4); // 3 cells × 2 venues = 6 blocks; the 4th request fails
   await assert.rejects(runPrecompute({ ...base, provider: first.provider, ...store }), /ORS 503/);
@@ -75,4 +75,18 @@ test("OSRM: a refusal reports its code, never the response body", async () => {
   globalThis.fetch = (async () => new Response(JSON.stringify({ code: "TooBig", message: "Too many table coordinates" }), { status: 400 })) as typeof fetch;
   await assert.rejects(osrmProvider.minutes([{ lat: 14.6, lng: 121 }], [{ lat: 14.5, lng: 121 }], "DRIVE"), /^Error: OSRM TooBig$/);
   assert.throws(() => parseOsrmTable({ code: "Ok", durations: [[1]] }, 2, 1), /shape/);
+});
+
+test("progress is saved by time, not after every block", async () => {
+  let saves = 0;
+  let t = 0;
+  await runPrecompute({ cells, venues, mode: "DRIVE", provider: estimateProvider, chunkOrigins: 1, chunkDest: 1, load: () => null, save: () => void saves++, now: () => (t += 10_000), saveEveryMs: 60_000 });
+  // 6 blocks, 10 s apart: one save once a minute has passed, plus the final one.
+  assert.equal(saves, 2);
+});
+
+test("OSRM: no origins or no destinations is an empty matrix, not a request", async () => {
+  process.env.OSRM_DRIVE_URL = "http://localhost:5000";
+  globalThis.fetch = (async () => assert.fail("no request expected")) as typeof fetch;
+  assert.deepEqual(await osrmProvider.minutes([{ lat: 14.6, lng: 121 }], [], "DRIVE"), [[]]);
 });

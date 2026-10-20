@@ -186,6 +186,7 @@ export const osrmProvider: MatrixProvider = {
     if (!base) throw new Error(`OSRM has no server for mode ${mode}`);
     const n = origins.length;
     const m = destinations.length;
+    if (!n || !m) return origins.map(() => []); // OSRM rejects an empty sources= or destinations=
     const coords = [...origins, ...destinations].map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(";");
     const sources = [...Array(n).keys()].join(";");
     const dests = [...Array(m).keys()].map((j) => n + j).join(";");

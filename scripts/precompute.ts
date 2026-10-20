@@ -17,8 +17,8 @@
  * --max-table-size), SLEEP_MS throttles between requests (default 1500,
  * 0 for osrm).
  *
- * Resumable: progress goes to <out>.partial.json every SAVE_EVERY blocks
- * (default 20) and when a request fails. Rerun the same command to carry on;
+ * Resumable: progress goes to <out>.partial.json about once a minute
+ * (SAVE_EVERY_MS) and when a request fails. Rerun the same command to carry on;
  * the partial file is deleted once the table is written.
  * TODO(claude-code): data/venues.json — curated venue list; schema = Venue[].
  */
@@ -70,7 +70,7 @@ const minutes = await runPrecompute({
   chunkDest: CD,
   depart,
   sleepMs: SLEEP,
-  saveEvery: Number(process.env.SAVE_EVERY ?? 20),
+  saveEveryMs: Number(process.env.SAVE_EVERY_MS ?? 60_000),
   load: () => (existsSync(partial) ? (JSON.parse(readFileSync(partial, "utf8")) as Progress) : null),
   // Write then rename, so an interrupted save never leaves a half-written file.
   save: (p) => {

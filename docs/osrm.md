@@ -36,7 +36,9 @@ foreach ($p in "car", "foot") {
 ## 3. Run the servers
 
 One per profile, on two ports. `--max-table-size` must be at least
-`CHUNK_ORIGINS + CHUNK_DEST` (the default is 100).
+`CHUNK_ORIGINS + CHUNK_DEST` (the default is 100). The coordinates travel in
+the request URL, about 21 characters each, so keep a request to a few hundred
+points (50 + 150 is about 4 KB); very long URLs may be refused.
 
 ```powershell
 docker run -d --name osrm-car  -p 5000:5000 -v "${PWD}\car:/data"  ghcr.io/project-osrm/osrm-backend osrm-routed --algorithm mld --max-table-size 1000 /data/philippines-latest.osrm
@@ -53,7 +55,7 @@ openrouteservice. Node's `--env-file` doesn't override variables already set.
 
 ```powershell
 $env:ROUTING_PROVIDER="osrm"; $env:OSRM_DRIVE_URL="http://localhost:5000"; $env:OSRM_WALK_URL="http://localhost:5001"
-$env:CHUNK_ORIGINS=100; $env:CHUNK_DEST=400
+$env:CHUNK_ORIGINS=50; $env:CHUNK_DEST=150
 node --env-file=.env.local --experimental-strip-types scripts/precompute.ts --band weekday_dismissal --mode DRIVE --venues data/venues.json --out data/tables/drive_weekday_dismissal.json --dry-run
 ```
 
