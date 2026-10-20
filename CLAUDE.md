@@ -49,7 +49,7 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - One traffic-aware Google build per band fixes ORS's no-traffic bias.
 - Open: host options in table mode need a cell→cell table; `data/venues.json`
   (curated venues for precompute) doesn't exist yet. Don't feed it all of
-  `data/mm-venues.json` (thousands of venues × 8.6k cells is tens of millions of elements).
+  `data/mm-venues.json` (12,271 venues × 5,664 cells is about 70 million elements).
 
 ## Core idea (don't regress this)
 - NOT a centroid problem. The centroid is only a search seed for candidate venues.
@@ -188,6 +188,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   against a production build (`next start`), not the dev server
   (`PATAS_LOCAL_DB=1 npx next start` so group links use local PGlite; stop
   `next dev` first since both would open `.data/pglite`)
+- Precompute: `node --experimental-strip-types scripts/precompute.ts --band
+  … --mode DRIVE|WALK --venues data/venues.json --out data/tables/…`, with
+  `ROUTING_PROVIDER=osrm` and local OSRM servers (`docs/osrm.md`; start them
+  with `docker start osrm-car osrm-foot`, data in `~/osrm`). Resumable.
 - `npm run promo` — 9:16 promo videos (30s and 60s cuts) via playwright-core +
   ffmpeg; content in `scripts/promo/storyboard.json`, stages cached under
   `out/promo/.build/`. Details in the header of `scripts/promo-video.ts`
@@ -207,21 +211,26 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   OpenStreetMap" wherever ORS times appear (planner does this).
 - Public Overpass is offline-only: on 2026-10-05 three mirrors returned 504s
   or took 90-200 s within the same hour. Never call it on the request path.
-- Privacy upgrade: self-host OSRM (`table` service) or Valhalla on a small VPS
-  (PH extract) so minors' coordinates never leave our server. Add as a new
-  `MatrixProvider`; Vercel can't host it.
+- Privacy upgrade: self-hosted OSRM. `osrmProvider` exists and runs locally
+  (`docs/osrm.md`: ~20 min preprocessing per profile, ~6 GiB peak, ~1.2 GiB
+  per running server). For live searches it still needs a small server
+  reachable from Vercel (a VPS, or a home box behind Tailscale Funnel), so
+  minors' cell centres never leave our machines. Vercel can't host it.
 - Don't trust OSM `opening_hours` in PH (sparse). Venue POIs are spottier than
   Google's; roads in Metro Manila are fine.
 - Public Nominatim forbids autocomplete — landmark search needs Photon,
   self-hosted Nominatim, or Google Places Autocomplete.
 
 ## Known gaps / next steps (in order)
-1. Smoke-test ORS with a real key (`npm run smoke`). Overpass is done (see
-   Provider strategy). Verify ORS free-tier matrix limits and Routes API
-   limits; chunk if needed.
+1. ORS limits learned the hard way: 3,500 elements per request, and error
+   6020 (too many visited nodes) for wide many-to-many walking requests, which
+   is why station walks are a prebuilt table. foot-walking was down most of
+   2026-10-18 (hiking fallback). Next step is building precomputed tables
+   with local OSRM, which needs gap 2 first.
 2. Curated venue allowlist (school, public libraries) — neither OSM nor Google
    knows "lets students stay 4 hrs". OSM snapshot already drops
-   access=private and staff canteens.
+   access=private and staff canteens. This list is also `data/venues.json`,
+   the input precompute needs (a few hundred to ~1,000 venues).
 3. "We met here" → meetings + burdens rows, then send priorBurden (rotation).
 4. RLS: the app reaches Postgres only server-side via `pg`, so tables stay
    RLS-enabled with no policies (deny-all for any non-owner role). Never ship
