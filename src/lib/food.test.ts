@@ -41,3 +41,22 @@ test("meet passes foodOnly through to the ranking", async () => {
     else process.env.ROUTING_PROVIDER = prev;
   }
 });
+
+test("a usual spot that isn't a food place is compared, but never listed, in food-only mode", async () => {
+  const prev = process.env.ROUTING_PROVIDER;
+  process.env.ROUTING_PROVIDER = "estimate";
+  try {
+    // A library roughly between the two members, so it would rank well if it were listed.
+    const library = loadVenueSnapshot().find((v) => v.tags[0] === "library" && Math.abs(v.location.lat - 14.59) < 0.03 && Math.abs(v.location.lng - 121.05) < 0.03)!;
+    assert.ok(library, "no library near the middle in the snapshot");
+    const cells = [{ memberId: "m1", cell: "89694ec2967ffff" }, { memberId: "m2", cell: "89694ec1dcbffff" }];
+    const { body } = await meet({ origins: cells, mode: "DRIVE", foodOnly: true, usual: library.venueId });
+    const results = body.results as { venueId: string; tags: string[] }[];
+    assert.ok(results.every((r) => isFood({ ...r, name: "", location: { lat: 0, lng: 0 } })));
+    assert.ok(!results.some((r) => r.venueId === library.venueId));
+    assert.equal((body.usual as { venueId: string }).venueId, library.venueId);
+  } finally {
+    if (prev === undefined) delete process.env.ROUTING_PROVIDER;
+    else process.env.ROUTING_PROVIDER = prev;
+  }
+});

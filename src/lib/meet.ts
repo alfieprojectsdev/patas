@@ -117,7 +117,8 @@ export async function meet(
     if (table) {
       // TODO(claude-code): host options need a cell→cell table; public venues only for now.
       const all = lookup(table, cells);
-      const keep = table.venues.flatMap((v, j) => (!foodOnly || isFood(v) ? [j] : []));
+      // The usual spot stays even if it isn't a food place: it's compared, not listed.
+      const keep = table.venues.flatMap((v, j) => (!foodOnly || isFood(v) || v.venueId === usualVenue?.venueId ? [j] : []));
       venues = keep.map((j) => table.venues[j]);
       matrix = all.map((row) => keep.map((j) => row[j]));
       source = `precomputed:${table.provider}:${table.builtAt.slice(0, 10)}`;
@@ -164,7 +165,8 @@ export async function meet(
       return { memberId: o.memberId, minutes, ...(legs ? { trip: roundLegs(legs, minutes) } : {}) };
     }),
   });
-  const results = ranked.slice(0, 5).map(toResult);
+  // Food only lists food places only; a usual spot that isn't one is still compared below, just not listed.
+  const results = ranked.filter((s) => !foodOnly || isFood(s.venue)).slice(0, 5).map(toResult);
   if (!usualVenue) return { status: 200, body: { results, source } };
 
   const place = placeUsual(ranked, usualVenue.venueId);

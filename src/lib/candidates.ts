@@ -54,9 +54,10 @@ export async function findCandidates(origins: Origin[], max = 20, { foodOnly = f
   return [...shortlist, ...(foodOnly ? [] : hostOptions(origins))].filter((v) => venueInScope(v.location));
 }
 
-/** Venue categories that count as "places where you can eat". */
-export const FOOD_TAGS = ["cafe", "fast_food", "restaurant"];
-export const isFood = (v: Venue) => FOOD_TAGS.includes(v.tags[0]);
+/** Venue categories that count as "places where you can eat": OSM's, plus Google Places' food types. */
+export const FOOD_TAGS = ["cafe", "fast_food", "restaurant", "meal_takeaway", "food"];
+// Any tag, not just the first: Google lists several types per place, and not always the food one first.
+export const isFood = (v: Venue) => v.tags.some((t) => FOOD_TAGS.includes(t));
 
 // ---------- Snapshot + selection ----------
 
