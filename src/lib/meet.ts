@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { findCandidates, loadSnapshot } from "./candidates.ts";
+import { findCandidates, isFood, loadFoodSnapshot, loadSnapshot } from "./candidates.ts";
 import { getProvider, noteOf } from "./routing.ts";
 import { itinerary, railNetwork, railProvider, stationVenues, type Leg } from "./rail.ts";
 import { rankVenues } from "./scoring.ts";
@@ -31,6 +31,8 @@ export type MeetInput = {
   departureTime?: string;
   /** "Our usual spot": a venue id from the snapshot, always ranked alongside the picks. */
   usual?: string;
+  /** Only places where you can eat: cafés, restaurants and fast food. No host options. */
+  foodOnly?: boolean;
 };
 export type MeetOutcome = { status: number; body: Record<string, unknown> };
 
@@ -79,7 +81,7 @@ export function roundLegs(legs: Leg[], total: number): Leg[] {
 }
 
 export async function meet(
-  { origins: input, mode, priorBurden, departureTime, usual }: MeetInput,
+  { origins: input, mode, priorBurden, departureTime, usual, foodOnly = false }: MeetInput,
   { later = (task) => void task(), itineraries = false }: MeetOptions = {},
 ): Promise<MeetOutcome> {
   const cells = input.map((o) => o.cell);
@@ -114,8 +116,10 @@ export async function meet(
   try {
     if (table) {
       // TODO(claude-code): host options need a cell→cell table; public venues only for now.
-      venues = table.venues;
-      matrix = lookup(table, cells);
+      const all = lookup(table, cells);
+      const keep = table.venues.flatMap((v, j) => (!foodOnly || isFood(v) ? [j] : []));
+      venues = keep.map((j) => table.venues[j]);
+      matrix = all.map((row) => keep.map((j) => row[j]));
       source = `precomputed:${table.provider}:${table.builtAt.slice(0, 10)}`;
     } else {
       // Train mode wraps whichever provider is configured, for its walking and driving times.
@@ -124,10 +128,10 @@ export async function meet(
       if (!provider.supports.includes(mode)) {
         return { status: 400, body: { error: `mode ${mode} not supported by ${provider.name}` } };
       }
-      venues = await findCandidates(origins);
+      venues = await findCandidates(origins, 20, { foodOnly });
       if (mode === "RAIL") {
         // Venues beside stations that suit the group, so the train has somewhere to go.
-        const extra = stationVenues(origins.map((o) => o.landmark), loadSnapshot(), railNetwork().stops);
+        const extra = stationVenues(origins.map((o) => o.landmark), foodOnly ? loadFoodSnapshot() : loadSnapshot(), railNetwork().stops);
         venues.push(...extra.filter((e) => !venues.some((v) => v.venueId === e.venueId)));
       }
       if (usualVenue && !venues.some((v) => v.venueId === usualVenue.venueId)) venues.push(usualVenue);

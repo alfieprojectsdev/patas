@@ -17,6 +17,7 @@ const Body = z.object({
   k: GroupKeyZ,
   mode: z.enum(["DRIVE", "WALK", "TRANSIT", "TWO_WHEELER", "RAIL"]).default("DRIVE"),
   usual: z.string().min(1).max(80).optional(),
+  foodOnly: z.boolean().optional(),
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ groupId: string }> }) {
@@ -34,6 +35,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ groupId
     origins: r.origins.map((o) => ({ memberId: o.alias, cell: o.cell })),
     mode: parsed.data.mode,
     usual: parsed.data.usual,
+    foodOnly: parsed.data.foodOnly,
   }, { later: after });
   return NextResponse.json(body, { status });
 }

@@ -39,15 +39,24 @@ function hostOptions(origins: Origin[]): Venue[] {
   }));
 }
 
-export async function findCandidates(origins: Origin[], max = 20): Promise<Venue[]> {
+/**
+ * `foodOnly`: only places where you can eat (FOOD_TAGS), for "where is it fair
+ * to meet up for dinner". A member's own area isn't one, so no host options.
+ */
+export async function findCandidates(origins: Origin[], max = 20, { foodOnly = false } = {}): Promise<Venue[]> {
   const src = process.env.CANDIDATE_SOURCE ?? "snapshot";
   const publicVenues =
     src === "google" ? await googlePlaces(searchArea(origins), max)
     : src === "overpass" ? await overpass(searchArea(origins), max)
-    : pickCandidates(loadSnapshot(), origins, max);
+    : pickCandidates(foodOnly ? loadFoodSnapshot() : loadSnapshot(), origins, max);
+  const shortlist = foodOnly ? publicVenues.filter(isFood) : publicVenues;
   // Service-area scope: drop venues (incl. host options) outside Metro Manila.
-  return [...publicVenues, ...hostOptions(origins)].filter((v) => venueInScope(v.location));
+  return [...shortlist, ...(foodOnly ? [] : hostOptions(origins))].filter((v) => venueInScope(v.location));
 }
+
+/** Venue categories that count as "places where you can eat". */
+export const FOOD_TAGS = ["cafe", "fast_food", "restaurant"];
+export const isFood = (v: Venue) => FOOD_TAGS.includes(v.tags[0]);
 
 // ---------- Snapshot + selection ----------
 
@@ -116,6 +125,17 @@ let snapshotCache: Venue[] | null = null;
 export function loadSnapshot(): Venue[] {
   if (!snapshotCache) snapshotCache = dedupeByCell(loadVenueSnapshot());
   return snapshotCache;
+}
+
+let foodCache: Venue[] | null = null;
+/**
+ * The same for food places only. Filtered before de-duplicating: in a cell with
+ * a mall and a café, the plain snapshot keeps the mall (it ranks higher), so
+ * filtering that would lose the café.
+ */
+export function loadFoodSnapshot(): Venue[] {
+  foodCache ??= dedupeByCell(loadVenueSnapshot().filter(isFood));
+  return foodCache;
 }
 
 // ---------- Overpass (OSM) ----------

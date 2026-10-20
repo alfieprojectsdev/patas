@@ -34,6 +34,7 @@ const Body = z.object({
   priorBurden: z.array(z.number().nonnegative()).optional(),
   departureTime: z.string().datetime({ offset: true }).optional(),
   usual: z.string().min(1).max(80).optional(), // a venue id from /api/venues
+  foodOnly: z.boolean().optional(), // cafés, restaurants and fast food only
 });
 
 export async function POST(req: Request) {

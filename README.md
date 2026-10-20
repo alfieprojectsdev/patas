@@ -26,7 +26,7 @@ Nobody in the group sees anyone else's landmark, only the list of who has joined
 
 <img src="docs/screenshots/1-pick-landmarks.png" alt="Landmark search: typing 'sm nor' suggests SM City North Edsa" width="560">
 
-Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, community centres, co-working spaces), gets each member's travel time to each one, and ranks them:
+Patas then shortlists about 20 venues (libraries, malls, cafés, fast food, community centres, co-working spaces), gets each member's travel time to each one, and ranks them. With **Food only** ticked, the shortlist has only cafés, restaurants and fast food, for "where is it fair to meet up for dinner". The ranking works the same way:
 
 1. the shortest longest trip, so the worst-off member is as well off as possible;
 2. then the smallest gap between the longest and shortest trip;

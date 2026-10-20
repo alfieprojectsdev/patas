@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import LandmarkPicker, { type Landmark } from "./landmark-picker";
 import { trackEvent } from "./analytics";
 import { initialOf, MemberHex, useMemberColors } from "./member-colors";
-import { MeetMap, ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember, type UsualResult } from "./results";
+import { FoodToggle, MeetMap, ModePicker, ResultsList, ResultsScreen, type Mode, type Result, type ResultMember, type UsualResult } from "./results";
 import { UsualSpotSection, type UsualSpot } from "./usual-spot-picker";
 
 /**
@@ -27,6 +27,7 @@ export function usePlanner() {
     { key: 2, alias: "", landmark: null },
   ]);
   const [mode, setMode] = useState<Mode>("DRIVE");
+  const [foodOnly, setFoodOnly] = useState(false);
   const [results, setResults] = useState<Result[] | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [source, setSource] = useState("");
@@ -50,6 +51,10 @@ export function usePlanner() {
     setMode(m);
     setResults(null);
   };
+  const changeFoodOnly = (on: boolean) => {
+    setFoodOnly(on);
+    setResults(null);
+  };
   const aliasOf = (i: number) => members[i]?.alias.trim() || `Member ${i + 1}`;
   const missing = members.filter((m) => !m.landmark);
   const ready = members.length >= 2 && missing.length === 0;
@@ -66,6 +71,7 @@ export function usePlanner() {
           origins: members.map((m, i) => ({ memberId: `m${i + 1}`, cell: m.landmark!.cell })),
           mode,
           usual: usualSpot?.venueId,
+          foodOnly: foodOnly || undefined,
         }),
       });
       const data = await res.json();
@@ -114,12 +120,12 @@ export function usePlanner() {
   const select = useCallback((id: string) => setSelected(id), []);
 
   return {
-    members, mode, results, source, error, loading, selected, showResults, missing, ready, usualSpot, usual,
+    members, mode, foodOnly, results, source, error, loading, selected, showResults, missing, ready, usualSpot, usual,
     changeUsual: (v: UsualSpot | null) => {
       setUsualSpot(v);
       setResults(null);
     },
-    update, remove, add, changeMode, findSpots, aliasOf, colorOf, memberOf, venueName, mapMembers, mapVenues, select,
+    update, remove, add, changeMode, changeFoodOnly, findSpots, aliasOf, colorOf, memberOf, venueName, mapMembers, mapVenues, select,
     edit: () => setShowResults(false),
   };
 }
@@ -170,6 +176,8 @@ export function PlannerForm({ p }: { p: PlannerState }) {
       </section>
 
       <ModePicker mode={p.mode} onChange={p.changeMode} />
+
+      <FoodToggle on={p.foodOnly} onChange={p.changeFoodOnly} />
 
       <UsualSpotSection value={p.usualSpot} onChange={p.changeUsual} />
 
@@ -228,6 +236,7 @@ export function PlannerResults({ p }: { p: PlannerState }) {
     <ResultsScreen
       title={p.members.map((_, i) => p.aliasOf(i)).join(", ")}
       mode={p.mode}
+      foodOnly={p.foodOnly}
       onEdit={p.edit}
       mapMembers={p.mapMembers}
       legend={legend}
