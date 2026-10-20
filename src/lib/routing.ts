@@ -6,7 +6,7 @@ import { haversineKm } from "./scoring.ts";
  * MVP; Google is a fallback; self-hosted OSRM/Valhalla is the privacy upgrade
  * (coords never leave our server); a Sakay.ph-backed provider is the intended
  * TRANSIT upgrade if a data partnership happens.
- * Select with ROUTING_PROVIDER=ors|google|estimate (default ors; estimate = no-key dev mode).
+ * Select with ROUTING_PROVIDER=ors|osrm|google|estimate (default ors; estimate = no-key dev mode).
  */
 export interface MatrixProvider {
   name: string;
@@ -152,9 +152,57 @@ export const estimateProvider: MatrixProvider = {
   minutes: async (o, d, m) => estimateMatrix(o, d, m),
 };
 
+// ---------- OSRM (self-hosted) ----------
+
+/**
+ * OSRM's table service on a server we run: on a laptop for precompute
+ * (docs/osrm.md), later on a small server for live searches. No quota, and
+ * the coordinates never leave our machines. Free-flow times, like ORS.
+ *
+ * osrm-routed serves one profile per process, so each mode has its own base
+ * URL: OSRM_DRIVE_URL (car.lua) and OSRM_WALK_URL (foot.lua). A mode without
+ * a URL isn't supported. Start osrm-routed with --max-table-size at least as
+ * large as origins + destinations per request (precompute's chunks).
+ *
+ * GET /table/v1/{profile}/{lng,lat;...}?sources=…&destinations=…&annotations=duration
+ * → { code: "Ok", durations: seconds[][] }, null where there's no route.
+ */
+const OSRM_URL: Partial<Record<TravelMode, string>> = { DRIVE: "OSRM_DRIVE_URL", WALK: "OSRM_WALK_URL" };
+const OSRM_PROFILE: Partial<Record<TravelMode, string>> = { DRIVE: "driving", WALK: "foot" };
+
+/** Pure: an OSRM table response → minutes. Errors carry OSRM's code only, never the body. */
+export function parseOsrmTable(json: { code?: string; durations?: (number | null)[][] }, n: number, m: number): CostMatrix {
+  if (json.code !== "Ok") throw new Error(`OSRM ${json.code ?? "error"}`);
+  return parseOrsMatrix(json, n, m); // same shape: seconds, n × m, null for no route
+}
+
+export const osrmProvider: MatrixProvider = {
+  name: "osrm",
+  get supports() {
+    return (Object.keys(OSRM_URL) as TravelMode[]).filter((m) => process.env[OSRM_URL[m]!]);
+  },
+  async minutes(origins, destinations, mode) {
+    const base = process.env[OSRM_URL[mode] ?? ""];
+    if (!base) throw new Error(`OSRM has no server for mode ${mode}`);
+    const n = origins.length;
+    const m = destinations.length;
+    if (!n || !m) return origins.map(() => []); // OSRM rejects an empty sources= or destinations=
+    const coords = [...origins, ...destinations].map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(";");
+    const sources = [...Array(n).keys()].join(";");
+    const dests = [...Array(m).keys()].map((j) => n + j).join(";");
+    const url = `${base.replace(/\/$/, "")}/table/v1/${OSRM_PROFILE[mode]}/${coords}?sources=${sources}&destinations=${dests}&annotations=duration`;
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(Number(process.env.OSRM_TIMEOUT_MS ?? 60_000)) });
+    // A refused request (too many points, bad coordinate) still answers with JSON naming the code.
+    const json = (await res.json().catch(() => ({}))) as { code?: string; durations?: (number | null)[][] };
+    if (!res.ok && json.code === undefined) throw new Error(`OSRM ${res.status}`);
+    return parseOsrmTable(json, n, m);
+  },
+};
+
 export function getProvider(): MatrixProvider {
   switch (process.env.ROUTING_PROVIDER) {
     case "google": return googleProvider;
+    case "osrm": return osrmProvider;
     case "estimate": return estimateProvider;
     default: return orsProvider;
   }
