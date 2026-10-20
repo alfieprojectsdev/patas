@@ -5,9 +5,25 @@ openrouteservice, but with no daily quota, because it runs on your machine.
 Patas uses it through `osrmProvider` (`ROUTING_PROVIDER=osrm`) to build the
 precomputed tables in `data/tables/`. Nothing here involves an LLM.
 
-Not measured yet: how much RAM the Philippines needs during preprocessing, and
-how long a full table build takes. Check both on the first run and write the
-numbers here.
+Measured on 2026-10-20 on this project's laptop (Docker Desktop VM with 8
+CPUs and 7.6 GiB of RAM, Philippines extract of 610,684,141 bytes):
+
+| Step | Car | Foot |
+|---|---|---|
+| osrm-extract | 14 min 46 s, peak ~6.1 GiB | 11 min 5 s, peak ~5.5 GiB |
+| osrm-partition | 3 min 7 s, peak ~1.5 GiB | 2 min 51 s, peak ~1.7 GiB |
+| osrm-customize | 1 min 14 s, peak ~0.9 GiB | 41 s, peak ~0.8 GiB |
+| Files on disk | 2.5 GB | 2.7 GB |
+
+Peaks were sampled from `docker stats` every 2 seconds, so short spikes may
+be higher. Extract is the only step near the VM's memory limit; give Docker
+at least 7 GiB, and more if you can. A running osrm-routed uses about 1.2–1.3
+GiB per profile. A 50 × 150 table request takes about 0.9 s for either
+profile, so a 1,000-venue table (about 800 requests per mode) takes about
+12 minutes. Expect some cells to have no route at all: in a 50-cell walking
+test one cell reached none of the 150 venues, most likely water or a
+fishpond. The table stores that as null, which `meet` already treats as
+unreachable.
 
 ## 1. Get the map data
 
