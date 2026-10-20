@@ -212,7 +212,7 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
 - Public Overpass is offline-only: on 2026-10-05 three mirrors returned 504s
   or took 90-200 s within the same hour. Never call it on the request path.
 - Privacy upgrade: self-hosted OSRM. `osrmProvider` exists and runs locally
-  (`docs/osrm.md`: ~20 min preprocessing per profile, ~6 GiB peak, ~1.2 GiB
+  (`docs/osrm.md`: 15–19 min preprocessing per profile, ~6 GiB peak, ~1.2 GiB
   per running server). For live searches it still needs a small server
   reachable from Vercel (a VPS, or a home box behind Tailscale Funnel), so
   minors' cell centres never leave our machines. Vercel can't host it.
