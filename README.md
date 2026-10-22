@@ -151,9 +151,10 @@ With a database configured, searches (60 an hour), group creation (10), joins (3
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (scoring, scope, H3, landmark and venue search, OSM parsing, rush-hour ranges, the Train model, the Food only filter, coastline clipping, the walking fallback, the OSRM provider, resumable precompute, failure alerts, and group links and feedback against PGlite) |
+| `npm test` | Unit tests (scoring, scope, H3, landmark and venue search, OSM parsing, rush-hour ranges, the Train model, the Food only filter, coastline clipping, the walking fallback, the OSRM provider, resumable precompute, failure alerts, and group links, feedback and the feedback dashboard against PGlite) |
 | `npm run db:migrate` | Apply new files in `supabase/migrations` to `DATABASE_URL` |
 | `npm run db:purge` | Delete expired encrypted cells, groups and old feedback (the app also does this as it runs) |
+| `npm run feedback` | Read-only feedback dashboard at http://127.0.0.1:3200, on this machine only. Local PGlite by default; set `DATABASE_URL` for production (see `docs/deploy.md`) |
 | `npm run smoke` | Live check of candidate lookup and routing with three public landmarks |
 | `npm run fetch:venues` | Rebuild `data/mm-venues.json` from OpenStreetMap (run `fetch:landmarks` first) |
 | `npm run fetch:landmarks` | Rebuild `data/mm-landmarks.json` (run `fetch:cities` first) |

@@ -92,6 +92,22 @@ npx neonctl@latest auth
 - Neon's free tier suspends an idle database, so the first request after a quiet period takes a few extra seconds.
 - No jeepney, UV or train times yet.
 
+## Reading feedback
+
+Feedback is in the `feedback` table. To read it, run the dashboard on your own machine; it isn't part of the deployed app, because a row can hold a contact someone left for a reply, and the page has no login. It only runs SELECTs, listens on 127.0.0.1, and refuses requests with any other Host header.
+
+```bash
+U="$(npx neonctl@latest connection-string --project-id <id> --pooled)" && [ -n "$U" ] && DATABASE_URL="$U" npm run feedback
+```
+
+In PowerShell:
+
+```powershell
+$env:DATABASE_URL = npx neonctl@latest connection-string --project-id <id> --pooled; try { if ($env:DATABASE_URL) { npm run feedback } } finally { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }
+```
+
+Then open http://127.0.0.1:3200, and stop the dashboard with Ctrl+C. The first line in the terminal says which database it's reading. The `finally` clears `DATABASE_URL` from the PowerShell session even after Ctrl+C, so a later `npm run dev` in the same window doesn't write to production. For the same reason, don't put the connection string in `.env.local`. Rows are deleted after 180 days.
+
 ## Rollback
 
 Vercel keeps every deployment. From the project's Deployments page, promote the previous one, or run `vercel rollback`. Removing the Porkbun record takes the subdomain offline entirely.
