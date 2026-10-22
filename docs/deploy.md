@@ -97,16 +97,16 @@ npx neonctl@latest auth
 Feedback is in the `feedback` table. To read it, run the dashboard on your own machine; it isn't part of the deployed app, because a row can hold a contact someone left for a reply, and the page has no login. It only runs SELECTs, listens on 127.0.0.1, and refuses requests with any other Host header.
 
 ```bash
-U="$(npx neonctl@latest connection-string --project-id <id> --pooled)" && [ -n "$U" ] && DATABASE_URL="$U" npm run feedback
+(U="$(npx neonctl@latest connection-string --project-id <id> --pooled)" && [ -n "$U" ] && DATABASE_URL="$U" npm run feedback || echo "no connection string; check neonctl auth and the project id")
 ```
 
 In PowerShell:
 
 ```powershell
-$env:DATABASE_URL = npx neonctl@latest connection-string --project-id <id> --pooled; try { if ($env:DATABASE_URL) { npm run feedback } } finally { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }
+$env:DATABASE_URL = npx neonctl@latest connection-string --project-id <id> --pooled; try { if ($env:DATABASE_URL) { npm run feedback } else { "no connection string; check neonctl auth and the project id" } } finally { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }
 ```
 
-Then open http://127.0.0.1:3200, and stop the dashboard with Ctrl+C. The first line in the terminal says which database it's reading. The `finally` clears `DATABASE_URL` from the PowerShell session even after Ctrl+C, so a later `npm run dev` in the same window doesn't write to production. For the same reason, don't put the connection string in `.env.local`. Rows are deleted after 180 days.
+Then open http://127.0.0.1:3200, and stop the dashboard with Ctrl+C. The first line in the terminal says which database it's reading. The bash version runs in a subshell so the string doesn't stay in your shell, and the `finally` clears `DATABASE_URL` from the PowerShell session even after Ctrl+C, so a later `npm run dev` in the same window doesn't write to production. For the same reason, don't put the connection string in `.env.local`. Rows are deleted after 180 days.
 
 ## Rollback
 

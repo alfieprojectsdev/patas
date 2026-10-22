@@ -81,7 +81,7 @@ const when = new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", dateSty
 export function device(ua: string | null): string {
   if (!ua) return "";
   const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "";
-  const browser = /Edg\//.test(ua) ? "Edge" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /FBAN|FBAV|FB_IAB/.test(ua) ? "Facebook in-app" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "";
+  const browser = /FBAN|FBAV|FB_IAB/.test(ua) ? "Facebook in-app" : /Edg(A|iOS)?\//.test(ua) ? "Edge" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Chrome\/|CriOS\//.test(ua) ? "Chrome" : /Firefox\/|FxiOS\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "";
   return [browser, os].filter(Boolean).join(" on ") || ua.slice(0, 60);
 }
 

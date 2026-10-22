@@ -7,19 +7,12 @@
  * The app also purges opportunistically when a group is created, so a cron
  * job is optional.
  */
-import { getDb } from "../src/lib/db.ts";
-import { migrate } from "../src/lib/db.ts";
+import { migrate, scriptDb } from "../src/lib/db.ts";
 import { purgeExpired } from "../src/lib/groups.ts";
 
 const cmd = process.argv[2];
-// Say which database this is. An empty DATABASE_URL (e.g. a failed
-// `$(neonctl connection-string)`) would otherwise fall back to local PGlite
-// and look like a successful no-op.
-const url = process.env.DATABASE_URL;
-if (url === "") throw new Error("DATABASE_URL is set but empty; refusing to fall back to the local database");
-console.log(url ? `database: ${new URL(url).host}` : "database: local PGlite (.data/pglite)");
-const db = await getDb();
-if (!db) throw new Error("DATABASE_URL is not set");
+const { db, source } = await scriptDb();
+console.log(source);
 if (cmd === "migrate") console.log("applied:", (await migrate(db)).join(", ") || "nothing new");
 else if (cmd === "purge") {
   await purgeExpired(db);

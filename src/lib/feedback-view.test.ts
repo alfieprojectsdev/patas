@@ -40,6 +40,8 @@ test("esc and render: message text can't inject markup", () => {
 test("device: a short label, not the whole user agent", () => {
   assert.equal(device("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36"), "Chrome on Android");
   assert.equal(device("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) [FBAN/FBIOS;FBAV/480.0]"), "Facebook in-app on iOS");
+  assert.equal(device("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 CriOS/129.0 Mobile/15E148 Safari/604.1"), "Chrome on iOS");
+  assert.equal(device("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36 EdgA/129.0"), "Edge on Android");
   assert.equal(device(null), "");
 });
 

@@ -10,15 +10,11 @@
  * can't reach it through DNS rebinding.
  */
 import { createServer } from "node:http";
-import { getDb } from "../src/lib/db.ts";
+import { scriptDb } from "../src/lib/db.ts";
 import { loadFeedback, parseFilter, renderPage } from "../src/lib/feedback-view.ts";
 
-const url = process.env.DATABASE_URL;
-if (url === "") throw new Error("DATABASE_URL is set but empty; refusing to fall back to the local database");
-const source = url ? `database: ${new URL(url).host}` : "database: local PGlite (.data/pglite)";
+const { db, source } = await scriptDb();
 console.log(source);
-const db = await getDb();
-if (!db) throw new Error("DATABASE_URL is not set");
 
 const port = Number(process.env.PORT) || 3200;
 const hosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
@@ -43,4 +39,9 @@ createServer(async (req, res) => {
     console.error("query failed:", (e as Error).message);
     res.writeHead(500, headers).end("Query failed; see the terminal.");
   }
-}).listen(port, "127.0.0.1", () => console.log(`feedback: http://127.0.0.1:${port}`));
+})
+  .on("error", (e: NodeJS.ErrnoException) => {
+    console.error(e.code === "EADDRINUSE" ? `port ${port} is in use; set PORT to another one` : e.message);
+    process.exit(1);
+  })
+  .listen(port, "127.0.0.1", () => console.log(`feedback: http://127.0.0.1:${port}`));
