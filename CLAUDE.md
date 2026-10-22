@@ -184,6 +184,10 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   `ROUTING_PROVIDER=estimate` for fake straight-line times, dev only)
 - `npm run smoke` — live check of candidates + routing with public landmarks
 - `npm run db:migrate` / `npm run db:purge` — against `DATABASE_URL` (or local PGlite)
+- `npm run feedback` — read-only feedback dashboard (`scripts/feedback-dashboard.ts`,
+  `src/lib/feedback-view.ts`), 127.0.0.1:3200 only, Host header checked. Never
+  deploy it: rows can hold a contact, and it has no login. Same database choice
+  as db:migrate; stop `next dev` first when using local PGlite.
 - `npm run screenshots` — README images via playwright-core + installed Edge,
   against a production build (`next start`), not the dev server
   (`PATAS_LOCAL_DB=1 npx next start` so group links use local PGlite; stop

@@ -82,3 +82,16 @@ export function getDb(): Promise<Db> | null {
   g.__patasDb.catch(() => (g.__patasDb = undefined)); // retry on the next request
   return g.__patasDb;
 }
+
+/**
+ * For command-line scripts: the database plus a line saying which one it is.
+ * An empty DATABASE_URL (e.g. a failed `$(neonctl connection-string)`) would
+ * otherwise fall back to local PGlite and look like a successful no-op.
+ */
+export async function scriptDb(): Promise<{ db: Db; source: string }> {
+  const url = process.env.DATABASE_URL;
+  if (url === "") throw new Error("DATABASE_URL is set but empty; refusing to fall back to the local database");
+  const db = await getDb();
+  if (!db) throw new Error("DATABASE_URL is not set");
+  return { db, source: url ? `database: ${new URL(url).host}` : "database: local PGlite (.data/pglite)" };
+}
