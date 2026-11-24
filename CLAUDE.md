@@ -46,7 +46,14 @@ Working name "patas" (Tagalog: even/fair). Portfolio-grade MVP first; product la
   land gives 5,664 cells. Check provider quotas before a full run.
 - Tables cover service-area cells only; if any origin cell is missing (buffer-zone
   member) the API routes live instead.
-- One traffic-aware Google build per band fixes ORS's no-traffic bias.
+- A traffic-aware build per band would fix ORS's no-traffic bias, but it's
+  not free: 5,664 cells × 500 venues is ~2.8 million elements per band, about
+  28 months of Mapbox's free 100,000 elements a month, or ~$5,400 at its
+  $2 per 1,000 rate (checked 2026-11-24). Google bills traffic-aware matrix
+  elements at its higher Pro rate. Don't start one without a costed decision.
+  Live traffic per search (~100 elements for 5 people × 20 venues) fits a
+  free tier, but free tiers bill past the limit, so it would need our own
+  monthly element counter that falls back to clear-road times.
 - Open: host options in table mode need a cell→cell table; `data/venues.json`
   (curated venues for precompute) doesn't exist yet. Don't feed it all of
   `data/mm-venues.json` (12,271 venues × 5,664 cells is about 70 million elements).
